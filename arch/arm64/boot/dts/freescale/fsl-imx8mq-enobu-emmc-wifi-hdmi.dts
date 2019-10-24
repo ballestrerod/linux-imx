@@ -18,6 +18,7 @@
 #include "fsl-imx8mq.dtsi"
 
 / {
+	model = "Leonardo MX8M eNOBU w/ EMMC+WIFI+HDMI";
 	compatible = "leonardo,imx8m-enobu", "fsl,imx8mq";
 
 	chosen {
@@ -160,7 +161,7 @@
                                 MX8MQ_IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI 		0x13      
                                 MX8MQ_IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK 		0x13      
                                 MX8MQ_IOMUXC_ECSPI2_SS0_GPIO5_IO13       	0x13    /* ESPI2_SS0      */   
-                                MX8MQ_IOMUXC_SD1_DATA0_GPIO2_IO2         	0x13    /* ESPI2_STBY_CAN */
+                                MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12         	0x13    /* ESPI2_STBY_CAN */
                                 MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25               0x13    /* SPI_INT        */
                     >;
                 };
@@ -281,14 +282,7 @@
 			>;
 		};
 
-                /* SDIO shared between WiFi/uSD  */
-		pinctrl_usdhc2_sd: usdhc2grpsd {
-			fsl,pins = <
-				MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x41
-				MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19		0x41
-			>;
-		};
-
+                /* Wifi SDIO on eNOBU - shared between WiFi/uSD  */
 		pinctrl_usdhc2: usdhc2grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_SD2_CLK_USDHC2_CLK			0x83
@@ -368,13 +362,6 @@
 			>;
 		};
 
-                /* sul Wifi (?) */
-		pinctrl_ethphy: ethphygrp {
-			fsl,pins = <
-				MX8MQ_IOMUXC_GPIO1_IO08_GPIO1_IO8		0xc1
-			>;
-		};
-
                 /* present but disabled by default */
 		pinctrl_lvds: lvdsgrp {
 			fsl,pins = <
@@ -384,7 +371,31 @@
 	};
 };
 
+
+
+/* Set WIFI SDIO voltage at 1.8V */
+&gpio1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi>;
+
+	hdmi_on_hog {
+		gpio-hog;
+		gpios = <5 0>;
+		output-low;
+		line-name = "hdmi_on";
+	};
+
+	wifi_vsel_hog {
+		gpio-hog;
+		gpios = <4 0>;
+		output-high;
+		line-name = "wifi_vsel";
+	};
+};
+
 &fec1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_fec1>;
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy0>;
 	fsl,magic-packet;
@@ -564,7 +575,6 @@
 	};
 };
 
-
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -602,6 +612,20 @@
            - LCMXO   fpga
            
          */
+};
+
+&ecspi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	cs-gpios = <&gpio5  13 GPIO_ACTIVE_HIGH>;
+	fsl,spi-num-chipselects = <1>;
+	status = "okay";
+
+        /* TODO popolare con
+
+           - MPC25625   External CAN controller
+        
+        */
 };
 
 /* PCIe Switch x4 ports */
@@ -671,6 +695,19 @@
 	status = "okay";
 };
 
+/* Wifi */
+&usdhc2 {
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_wifi>;
+	pinctrl-1 = <&pinctrl_usdhc2_100mhz>, <&pinctrl_wifi>;
+	pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_wifi>;
+	bus-width = <4>;
+	vmmc-supply = <&reg_wifi_en>;
+	status = "okay";
+};
+
+
+
 &usb3_phy0 {
 	status = "okay";
 };
@@ -685,6 +722,9 @@
 	dr_mode = "otg";
 };
 
+
+
+
 &usb3_phy1 {
 	status = "okay";
 };
@@ -697,8 +737,6 @@
 	status = "okay";
 	dr_mode = "host";
 };
-
-
 
 
 
@@ -791,17 +829,6 @@
 		800000  900000
 	>;
 	dc-supply = <&reg_cpu_dvfs>;
-};
-
-&ecspi2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi2>;
-	cs-gpios = <&gpio5  13 GPIO_ACTIVE_HIGH>,
-	fsl,spi-num-chipselects = <1>;
-	status = "okay";
-
-        /* (...) */
-
 };
 
 &snvs_rtc {
