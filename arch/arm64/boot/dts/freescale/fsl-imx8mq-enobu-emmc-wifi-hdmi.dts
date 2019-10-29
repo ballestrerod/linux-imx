@@ -581,16 +581,39 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
+        /* RTC8564 real time clock */
+	pcf8564@51 {
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+	};
+
+        /* M24512 eeprom */
+        eeprom@56 {
+		compatible = "atmel,24c512";
+		reg = <0x56>;
+	};
+
+        /* TAS6424 power codec */
+        tas6424: tas6424@6a {
+	        compatible = "ti,tas6424";
+	        reg = <0x6a>;
+
+	        #sound-dai-cells = <0>;
+                standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
+                mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
+
+                pinctrl-names = "default";
+	        pinctrl-0 = <&pinctrl_audiopw>;
+                interrupts-extended = <&gpio3 21 IRQ_TYPE_EDGE_FALLING>,
+                                      <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
+        };
+
         /* TODO popolare con
 
-           - RTC8564   real time clock
+           - IIS2DH  accelerometro
            - USB5744T  usb hub
            - TPS2388   poe pse controller
-           - TAS6424   power codec
-           - IIS2DHTR  accelerometro e magnetometro
-           - M24512    eeprom
-           
-         */
+        */
 };
 
 &i2c3 {
@@ -611,7 +634,7 @@
 
            - LCMXO   fpga
            
-         */
+        */
 };
 
 &ecspi2 {
@@ -706,8 +729,7 @@
 	status = "okay";
 };
 
-
-
+/* USBOTG */
 &usb3_phy0 {
 	status = "okay";
 };
@@ -718,13 +740,10 @@
 
 &usb_dwc3_0 {
 	status = "okay";
-	extcon = <&typec_ptn5150>;
-	dr_mode = "otg";
+	dr_mode = "host";
 };
 
-
-
-
+/* USBUP to hub USB5744T */
 &usb3_phy1 {
 	status = "okay";
 };
@@ -737,8 +756,6 @@
 	status = "okay";
 	dr_mode = "host";
 };
-
-
 
 /* TAS6424 power codec */
 &sai1 {
