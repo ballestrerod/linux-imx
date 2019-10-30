@@ -393,6 +393,8 @@
 	};
 };
 
+
+/* TODO prendere esempio dalla vecchia nobu 4.9.11 */
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
@@ -599,8 +601,8 @@
 	        reg = <0x6a>;
 
 	        #sound-dai-cells = <0>;
-                standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
-                mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
+                /* standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>; */
+                /* mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;    */
 
                 pinctrl-names = "default";
 	        pinctrl-0 = <&pinctrl_audiopw>;
@@ -683,7 +685,6 @@
 	ext_osc = <1>;
 	status = "okay";
 };
-
 
 /* Console */
 &uart1 {
