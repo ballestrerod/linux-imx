@@ -608,9 +608,24 @@
                                       <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
         };
 
+        /* IIS2DH  accelerometro */
+        accel: iis2dh@31 {
+  		compatible = "st,iis2dh_accel";
+  		reg = <0x31>;
+
+                /* TODO 
+                   per ora gli irq passano da FPGA,
+                   valutare se farseli arrivare direttamente al
+                   micro.
+
+                   interrupt-parent = <&gpio1>;
+  		   interrupts = <26 IRQ_TYPE_LEVEL_HIGH>, 
+                                <27 IRQ_TYPE_LEVEL_HIGH>;
+                */
+        };
+
         /* TODO popolare con
 
-           - IIS2DH  accelerometro
            - USB5744T  usb hub
            - TPS2388   poe pse controller
         */
