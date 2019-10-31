@@ -661,11 +661,17 @@
 	fsl,spi-num-chipselects = <1>;
 	status = "okay";
 
-        /* TODO popolare con
+        /* MPC25625  External CAN controller */
+	can0: can@1 {
+		compatible = "microchip,mcp25625";
+		reg = <1>;
+		clocks = <&can0_osc>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <25 0x2>;
+		vdd-supply = <&reg5v0>;         /* TODO sostituire */
+		xceiver-supply = <&reg5v0>;     /* TODO sostituire */
+	};
 
-           - MPC25625   External CAN controller
-        
-        */
 };
 
 /* PCIe Switch x4 ports */
