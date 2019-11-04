@@ -1,6 +1,7 @@
 /*
  * Copyright 2017 NXP
  * Copyright 2018-2019 Variscite Ltd.
+ * Copyright 2019 Leonardo S.p.A.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -45,10 +46,19 @@
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 		};
+
+		reg_can: 5v_iso {
+			compatible = "regulator-fixed";
+			regulator-name = "mcp25625_supply";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
 	};
 
         /* CFPX-180 quartz crystal */
-	can0_osc: can0_osc {
+	can_osc: can0_osc {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <20000000>;
@@ -601,8 +611,14 @@
 	        reg = <0x6a>;
 
 	        #sound-dai-cells = <0>;
-                /* standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>; */
-                /* mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;    */
+
+                /* TODO 
+                 * prendere dalla versione successiva di kernel gli agganci
+                 * per definire e gestire i seguenti GPIO.
+                 *
+                 * standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
+                 * mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
+                 */
 
                 pinctrl-names = "default";
 	        pinctrl-0 = <&pinctrl_audiopw>;
@@ -616,21 +632,35 @@
   		reg = <0x31>;
 
                 /* TODO 
-                   per ora gli irq passano da FPGA,
-                   valutare se farseli arrivare direttamente al
-                   micro.
-
-                   interrupt-parent = <&gpio1>;
-  		   interrupts = <26 IRQ_TYPE_LEVEL_HIGH>, 
-                                <27 IRQ_TYPE_LEVEL_HIGH>;
-                */
+                 * per ora gli irq passano da FPGA,
+                 * valutare se farseli arrivare direttamente al
+                 * micro.
+                 *
+                 * interrupt-parent = <&gpio1>;
+  		 * interrupts = <26 IRQ_TYPE_LEVEL_HIGH>, 
+                 *              <27 IRQ_TYPE_LEVEL_HIGH>;
+                 */
         };
 
-        /* TODO popolare con
+        /* USB5744T  usb hub */
+        usb3_hub: usb5744@2d {
+		compatible = "microchip,usb5744";
+		reg = <0x2d>;
 
-           - USB5744T  usb hub
-           - TPS2388   poe pse controller
-        */
+		/* TODO 
+                 * nel caso facessimo passare i GPIO da fpga a uP,
+                 * agganciare la funzione del segnale di reset.
+                 *
+                 * pinctrl-names = "default";
+		 * pinctrl-0 = <&pinctrl_usb5744>;
+		 * reset-gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
+                 */
+	};
+
+        /* TODO popolare con
+         *
+         * - TPS2388   poe pse controller
+         */
 };
 
 &i2c3 {
@@ -665,11 +695,11 @@
 	can0: can@1 {
 		compatible = "microchip,mcp25625";
 		reg = <1>;
-		clocks = <&can0_osc>;
+		clocks = <&can_osc>;
 		interrupt-parent = <&gpio3>;
 		interrupts = <25 0x2>;
-		vdd-supply = <&reg5v0>;         /* TODO sostituire */
-		xceiver-supply = <&reg5v0>;     /* TODO sostituire */
+		vdd-supply = <&reg_can>;
+		xceiver-supply = <&reg_can>;
 	};
 
 };
