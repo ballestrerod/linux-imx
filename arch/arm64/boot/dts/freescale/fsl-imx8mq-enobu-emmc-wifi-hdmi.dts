@@ -22,6 +22,10 @@
 	model = "Leonardo MX8M eNOBU w/ EMMC+WIFI+HDMI";
 	compatible = "leonardo,imx8m-enobu", "fsl,imx8mq";
 
+        aliases {
+		spi3 = &spi_fpga;
+        };
+
 	chosen {
 		bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200";
 		stdout-path = &uart1;
@@ -96,6 +100,24 @@
 				<192000>;
 		status = "disabled";
 	};
+
+	spi_fpga: spi-fpga {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_spifpga>;
+		compatible = "spi-gpio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gpio-sck = <&gpio3 0 GPIO_ACTIVE_HIGH>;
+		gpio-miso = <&gpio3 6 GPIO_ACTIVE_HIGH>;
+		gpio-mosi = <&gpio3 7 GPIO_ACTIVE_HIGH>;
+		cs-gpios = <&gpio3 1 GPIO_ACTIVE_HIGH>;
+		num-chipselects = <1>;
+
+		status = "disabled";
+
+                /* FPGA Lattice MachXO3LF */
+        };
 };
 
 
@@ -679,7 +701,8 @@
 
         /* TODO popolare con
 
-           - LCMXO   fpga
+           - PI7C9X2G404  pcie hub
+           - LCMXO3       fpga
            
         */
 };
