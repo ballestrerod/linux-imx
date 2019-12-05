@@ -114,10 +114,28 @@
 		cs-gpios = <&gpio3 1 GPIO_ACTIVE_HIGH>;
 		num-chipselects = <1>;
 
-		status = "disabled";
+		status = "okay";
 
                 /* FPGA Lattice MachXO3LF */
+                fpga_mgr_spi: fpga-mgr@0 {
+			compatible = "lattice,machxo2-slave-spi";
+			spi-max-frequency = <8000000>;
+			reg = <0>;
+		};
         };
+
+	fpga-region0 {
+		compatible = "fpga-region";
+		fpga-mgr = <&fpga_mgr_spi>;
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+
+                firmware-name = "enobu-fpga.bit";
+
+                /* region fpga devices (MDIO, GPIO, I2C, SPI) */
+
+	};
+
 };
 
 
@@ -571,30 +589,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_lvds>;
 		status = "disabled";
-
-		display-timings {
-			lvds {
-				clock-frequency = <33000000>;
-				hactive = <800>;
-				vactive = <480>;
-				hback-porch = <40>;
-				hfront-porch = <40>;
-				vback-porch = <29>;
-				vfront-porch = <13>;
-				hsync-len = <48>;
-				vsync-len = <3>;
-				hsync-active = <0>;
-				vsync-active = <0>;
-				de-active = <1>;
-				pixelclk-active = <0>;
-			};
-		};
-
-		port {
-			sn65dsi84_in: endpoint {
-				remote-endpoint = <&mipi_dsi_bridge_out>;
-			};
-		};
 	};
 
 	reg_cpu_dvfs: tps62361@60 {
@@ -702,7 +696,7 @@
         /* TODO popolare con
 
            - PI7C9X2G404  pcie hub
-           - LCMXO3       fpga
+           - LCMXO3       fpga (backup) 
            
         */
 };
@@ -729,18 +723,12 @@
 
 /* PCIe Switch x4 ports */
 &pcie0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie0>;
-	reset-gpio = <&gpio4 7 GPIO_ACTIVE_LOW>;
 	ext_osc = <1>;
 	status = "okay";
 };
 
 /* M.2 Module 1 */
 &pcie1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie1>;
-	reset-gpio = <&gpio4 19 GPIO_ACTIVE_LOW>;
 	ext_osc = <1>;
 	status = "okay";
 };
@@ -773,14 +761,14 @@
 };
 
 /* Bluetooth */
-&uart4 {
+/* &uart4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MQ_CLK_UART4>;
 	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 	fsl,uart-has-rtscts;
 	status = "disabled";
-};
+}; */
 
 /* eMMC */
 &usdhc1 {
