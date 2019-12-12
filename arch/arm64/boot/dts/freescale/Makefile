@@ -114,8 +114,12 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 fsl-imx8mq-evk-inmate.dtb \
 				 fsl-imx8mq-evk-dp.dtb \
 				 fsl-imx8mq-evk-edp.dtb \
+				 \
 				 fsl-imx8mq-enobu-emmc-wifi-hdmi.dtb \
+				 fsl-imx8mq-enobu-emmc-wifi-hdmi-cb12.dtb \
 				 fsl-imx8mq-enobu-sd-emmc-lvds.dtb \
+				 fsl-imx8mq-enobu-sd-emmc-lvds-cb12.dtb \
+				 \
 				 fsl-imx8mq-var-dart-emmc-wifi-hdmi.dtb \
 				 fsl-imx8mq-var-dart-emmc-wifi-lvds.dtb \
 				 fsl-imx8mq-var-dart-emmc-wifi-dual-display.dtb \
