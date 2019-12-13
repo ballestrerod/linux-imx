@@ -169,7 +169,9 @@
 				MX8MQ_IOMUXC_ENET_RXC_ENET1_RGMII_RXC		0x91
 				MX8MQ_IOMUXC_ENET_RX_CTL_ENET1_RGMII_RX_CTL	0x91
 				MX8MQ_IOMUXC_ENET_TX_CTL_ENET1_RGMII_TX_CTL	0x1f
-				MX8MQ_IOMUXC_SAI5_RXD3_GPIO3_IO24		0x57
+				MX8MQ_IOMUXC_SAI5_RXD3_GPIO3_IO24		0x47
+                                MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3               0xc1
+                                MX8MQ_IOMUXC_GPIO1_IO05_GPIO1_IO5               0xc1
 			>;
 		};
 
@@ -448,23 +450,26 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
 	phy-mode = "rgmii";
-        phy-handle = <&switch0>;
+        phy-handle = <&switch0phy6>;
 	phy-reset-gpios = <&gpio3 24 GPIO_ACTIVE_LOW>;
-	phy-reset-duration = <10>;
+	phy-reset-duration = <30>;
         status = "okay";
 
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-                switch0: switch0@18 {
+                switch0: switch0@0 {
         		compatible = "marvell,mv88e6085";
         		#address-cells = <1>;
         		#size-cells = <0>;
         		reg = <0x18>;
-	                
-        		dsa,member = <0x18 0>;
-        
+        		dsa,member = <0 0>;
+			interrupt-parent = <&gpio1>;
+			interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+	               	interrupt-controller;
+			#interrupt-cells = <2>;
+ 
         		ports {
         			#address-cells = <1>;
         			#size-cells = <0>;
@@ -472,99 +477,43 @@
                                 port@0 {
 			        	reg = <0>;
 			        	label = "lan0";
+                                        phy-handle = <&switch0phy0>;
         		        };
 
                                 port@1 {
                                         reg = <1>;
                                         label = "lan1";
+                                        phy-handle = <&switch0phy1>;
                                 };
   
                                 port@2 {
                                         reg = <2>;
                                         label = "lan2";
+                                        phy-handle = <&switch0phy2>;
                                 };
   
                                 port@3 {
                                         reg = <3>;
                                         label = "lan3";
+                                        phy-handle = <&switch0phy3>;
                                 };
   
                                 port@4 {
                                         reg = <4>;
                                         label = "lan4";
+                                        phy-handle = <&switch0phy4>;
                                 };
   
-                                port@6 {
+                                switch0phy6: port@6 {
                                         reg = <6>;
                                         label = "cpu";
                                         ethernet = <&fec1>;
-                                };
-  
-	                };
-	        };
-        };
-};
+	                                phy-mode = "rgmii";
 
-/*
-&fec1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_fec1>;
-	phy-mode = "rgmii";
-        phy-handle = <&switch0>;
-	phy-reset-gpios = <&gpio3 24 GPIO_ACTIVE_LOW>;
-	phy-reset-duration = <10>;
-        status = "okay";
-
-	mdio {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-                switch0: switch0@18 {
-        		compatible = "marvell,mv88e6085";
-        		#address-cells = <1>;
-        		#size-cells = <0>;
-        		reg = <0x18>;
-	                
-        		dsa,member = <0x18 0>;
-        
-        		ports {
-        			#address-cells = <1>;
-        			#size-cells = <0>;
-			        
-                                port@0 {
-			        	reg = <0>;
-			        	label = "lan0";
-                               		phy-handle = <&switch0phy0>;
-        		        };
-
-                                port@1 {
-                                        reg = <1>;
-                                        label = "lan1";
-                               		phy-handle = <&switch0phy1>;
-                                };
-  
-                                port@2 {
-                                        reg = <2>;
-                                        label = "lan2";
-                               		phy-handle = <&switch0phy2>;
-                                };
-  
-                                port@3 {
-                                        reg = <3>;
-                                        label = "lan3";
-                               		phy-handle = <&switch0phy3>;
-                                };
-  
-                                port@4 {
-                                        reg = <4>;
-                                        label = "lan4";
-                               		phy-handle = <&switch0phy4>;
-                                };
-  
-                                port@6 {
-                                        reg = <6>;
-                                        label = "cpu";
-                                        ethernet = <&fec1>;
+                                        fixed-link {
+                                                speed = <1000>;
+                                                full-duplex;
+                                        };
                                 };
   
 	                };
@@ -576,32 +525,32 @@
 				switch0phy0: switch0phy0@0 {
 					reg = <0>;
                                         interrupt-parent = <&switch0>;
+					interrupts = <0 IRQ_TYPE_LEVEL_HIGH>;
                                 };
 				switch0phy1: switch0phy1@0 {
 					reg = <1>;
                                         interrupt-parent = <&switch0>;
+					interrupts = <1 IRQ_TYPE_LEVEL_HIGH>;
                                 };
 				switch0phy2: switch0phy2@0 {
 					reg = <2>;
                                         interrupt-parent = <&switch0>;
+					interrupts = <2 IRQ_TYPE_LEVEL_HIGH>;
                                 };
 				switch0phy3: switch0phy3@0 {
 					reg = <3>;
                                         interrupt-parent = <&switch0>;
+					interrupts = <3 IRQ_TYPE_LEVEL_HIGH>;
                                 };
 				switch0phy4: switch0phy4@0 {
 					reg = <4>;
                                         interrupt-parent = <&switch0>;
-                                };
-				switch0phy6: switch0phy6@0 {
-					reg = <6>;
-                                        interrupt-parent = <&switch0>;
+					interrupts = <4 IRQ_TYPE_LEVEL_HIGH>;
                                 };
                         };
 	        };
         };
 };
-*/
 
 
 
