@@ -221,7 +221,7 @@
 
 		pinctrl_hdmi: hdmigrp {
 			fsl,pins = <
-				MX8MQ_IOMUXC_SAI1_TXD4_GPIO4_IO16		0xc1    /* HDMI_I2C_EN (?) */
+				MX8MQ_IOMUXC_SAI1_TXD4_GPIO4_IO16		0xc1    /* HDMI_I2C_EN */
 			>;
 		};
 
@@ -427,9 +427,6 @@
 
 /* Set WIFI SDIO voltage at 1.8V */
 &gpio1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hdmi>;
-
 	wifi_vsel_hog {
 		gpio-hog;
 		gpios = <4 0>;
@@ -507,6 +504,7 @@
                                         reg = <5>;
                                         label = "dsa";
                                         link = <&switch1uplink>;
+                                        phy-mode = "sgmii";
 				        fixed-link {
 					        speed = <1000>;
 					        full-duplex;
@@ -560,6 +558,7 @@
                                         reg = <5>;
                                         label = "dsa";
                                         link = <&switch0downlink>;
+                                        phy-mode = "sgmii";
                                         fixed-link {
 					        speed = <1000>;
 					        full-duplex;
@@ -682,6 +681,9 @@
 		status = "okay";
 	};
 
+
+        /* 
+            TODO eliminare dal devicetree, non presente su SOM
 	dsi_lvds_bridge: sn65dsi84@2c {
 		compatible = "ti,sn65dsi83";
 		reg = <0x2c>;
@@ -695,6 +697,7 @@
 		pinctrl-0 = <&pinctrl_lvds>;
 		status = "disabled";
 	};
+        */
 
 	reg_cpu_dvfs: tps62361@60 {
 		reg = <0x60>;
@@ -730,6 +733,15 @@
                  *              <27 IRQ_TYPE_LEVEL_HIGH>;
                  */
         };
+
+        /* TODO popolare con
+         *
+         * - TPS2388   poe pse controller
+         *      reg = <0x20>;
+	 *   
+         * - TPS2388   poe pse controller
+         *      reg = <0x21>;
+         */
 
         /* RTC8564 real time clock */
 	pcf8564@51 {
@@ -767,7 +779,7 @@
         /* USB5744T  usb hub */
         usb3_hub: usb5744@2d {
 		compatible = "microchip,usb5744";
-		reg = <0x2d>;
+		reg = <0x7f>;
 
 		/* TODO 
                  * nel caso facessimo passare i GPIO da fpga a uP,
@@ -779,10 +791,6 @@
                  */
 	};
 
-        /* TODO popolare con
-         *
-         * - TPS2388   poe pse controller
-         */
 };
 
 &i2c3 {
@@ -810,7 +818,7 @@
 &ecspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
-	cs-gpios = <&gpio5  13 GPIO_ACTIVE_HIGH>;
+	cs-gpios = <&gpio5 13 GPIO_ACTIVE_HIGH>;
 	fsl,spi-num-chipselects = <1>;
 	status = "okay";
 
@@ -821,7 +829,7 @@
 		clocks = <&can_osc>;
 		interrupt-parent = <&gpio3>;
 		interrupts = <25 0x2>;
-                spi-max-frequency = <20000000>;
+                spi-max-frequency = <5000000>;
 		vdd-supply = <&reg_can>;
 		xceiver-supply = <&reg_can>;
 	        status = "okay";
@@ -928,6 +936,27 @@
 	dr_mode = "host";
 };
 
+&gpio4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi>;
+
+	hdmi_on_hog {
+		gpio-hog;
+		gpios = <16 0>;
+		output-high;
+		line-name = "hdmi_on";
+	};
+};
+
+&dcss {
+	status = "okay";
+	disp-dev = "hdmi_disp";
+};
+
+&hdmi {
+	status = "okay";
+};
+
 /* TAS6424 power codec */
 &sai1 {
 	pinctrl-names = "default";
@@ -998,7 +1027,7 @@
 	/delete-node/ linux,cma;
 };
 
-&rpmsg{
+&rpmsg {
 	/*
 	 * 64K for one rpmsg instance:
 	 * --0xb8000000~0xb800ffff: pingpong
