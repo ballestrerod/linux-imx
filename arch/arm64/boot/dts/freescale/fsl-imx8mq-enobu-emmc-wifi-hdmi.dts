@@ -837,16 +837,16 @@
 
 };
 
-/* PCIe Switch x4 ports */
+/* PCIe Switch x2 ports */
 &pcie0 {
 	ext_osc = <1>;
-	status = "disabled";
+	status = "okay";
 };
 
 /* M.2 Module 1 */
 &pcie1 {
 	ext_osc = <1>;
-	status = "disabled";
+	status = "okay";
 };
 
 /* Console */
