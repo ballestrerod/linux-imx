@@ -59,6 +59,14 @@
 			regulator-always-on;
 		};
 
+		reg_usb_otg1_vbus: vbus_otg {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+			regulator-always-on;
+		};
 	};
 
         /* CFPX-180 quartz crystal */
@@ -268,7 +276,7 @@
 			fsl,pins = <
 				MX8MQ_IOMUXC_UART2_RXD_UART2_DCE_RX		0x49
 				MX8MQ_IOMUXC_UART2_TXD_UART2_DCE_TX		0x49
-                                MX8MQ_IOMUXC_UART4_RXD_UART2_DCE_CTS_B          0x49  /* (?) */
+                                /* MX8MQ_IOMUXC_UART4_RXD_UART2_DCE_CTS_B          0x49  (?) */
                                 MX8MQ_IOMUXC_UART4_TXD_UART2_DCE_RTS_B          0x49  /* (?) */
 			>;
 		};
@@ -415,10 +423,24 @@
 			>;
 		};
 
+		pinctrl_pcie0: pcie0grp {
+			fsl,pins = <
+                                MX8MQ_IOMUXC_UART4_RXD_GPIO5_IO28               0x76
+                                /* MX8MQ_IOMUXC_UART4_RXD_PCIE1_CLKREQ_B        0x76
+				/* MX8MQ_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	        0x76    open drain, pull up */
+			>;
+		};
+
                 /* present but disabled by default */
 		pinctrl_lvds: lvdsgrp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x16
+			>;
+		};
+                
+		pinctrl_usbotg: usbotggrp {
+			fsl,pins = <
+                                MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12              0xc1   /* usb_otg_pwr_en */
 			>;
 		};
 	};
@@ -837,16 +859,19 @@
 
 };
 
-/* PCIe Switch x2 ports */
+/* M.2 Module 1 */
 &pcie0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie0>;
+        clkreq-gpio = <&gpio5 28 GPIO_ACTIVE_HIGH>;
 	ext_osc = <1>;
 	status = "okay";
 };
 
-/* M.2 Module 1 */
+/* PCIe Switch x2 ports */
 &pcie1 {
 	ext_osc = <1>;
-	status = "okay";
+	status = "disable";
 };
 
 /* Console */
@@ -908,6 +933,21 @@
 	status = "okay";
 };
 
+
+/*
+&gpio1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg>;
+
+	otgpwr_on_hog {
+		gpio-hog;
+		gpios = <12 0>;
+		output-high;
+		line-name = "otg_pwr";
+	};
+};
+*/
+
 /* USBOTG */
 &usb3_phy0 {
 	status = "okay";
@@ -918,9 +958,13 @@
 };
 
 &usb_dwc3_0 {
-	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg>;
+	vbus-supply = <&reg_usb_otg1_vbus>;
 	dr_mode = "host";
+	status = "okay";
 };
+
 
 /* USBUP to hub USB5744T */
 &usb3_phy1 {
@@ -932,9 +976,11 @@
 };
 
 &usb_dwc3_1 {
-	status = "okay";
 	dr_mode = "host";
+	status = "okay";
 };
+
+
 
 &gpio4 {
 	pinctrl-names = "default";

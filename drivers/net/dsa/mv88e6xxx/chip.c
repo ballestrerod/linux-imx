@@ -1762,6 +1762,32 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
 		err = mv88e6xxx_serdes_power(chip, port, true);
 		if (err)
 			return err;
+
+                /* DEBUG */
+                err = mv88e6xxx_port_read(chip, port, 0x17, &reg);
+		if (err)
+			return err;
+		dev_dbg(chip->dev, "p%d: SERDES Reserved 0x17 register (%x)\n", port, reg);
+
+                if (dsa_is_dsa_port(ds, port)) {
+                        err = mv88e6xxx_port_write(chip, port, 0x17, 0x8505);
+		        if (err)
+			        return err;
+                
+                        err = mv88e6xxx_port_write(chip, port, 0x17, 0x8080);
+		        if (err)
+			        return err;
+                
+                        err = mv88e6xxx_port_write(chip, port, 0x17, 0x9);
+		        if (err)
+			        return err;
+                
+                        err = mv88e6xxx_port_read(chip, port, 0x17, &reg);
+		        if (err)
+		        	return err;
+		        dev_dbg(chip->dev, "p%d: SERDES Reserved 0x17 register (%x)\n", port, reg);
+                }
+                
 	}
 
 	/* Port Control 2: don't force a good FCS, set the maximum frame size to
@@ -3676,6 +3702,9 @@ static struct mv88e6xxx_chip *mv88e6xxx_alloc_chip(struct device *dev)
 static int mv88e6xxx_smi_init(struct mv88e6xxx_chip *chip,
 			      struct mii_bus *bus, int sw_addr)
 {
+        dev_err(chip->dev, "SW_ADDR 0x%x: selecting %s-chip addressing mode\n",
+	        sw_addr, sw_addr == 0? "single":"multi");
+
 	if (sw_addr == 0)
 		chip->smi_ops = &mv88e6xxx_smi_single_chip_ops;
 	else if (chip->info->multi_chip)
