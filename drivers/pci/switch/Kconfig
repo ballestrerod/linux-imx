@@ -10,4 +10,10 @@ config PCI_SW_SWITCHTEC
 	 devices. See <file:Documentation/switchtec.txt> for more
 	 information.
 
+config PCI_SW_PERICOM
+	tristate "Pericom PCIe Switch Driver"
+	help
+	 Enables support for the management interface for the 
+         Pericom PI7C9X2G404EL.
+
 endmenu
