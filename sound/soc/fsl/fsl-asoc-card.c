@@ -28,8 +28,10 @@
 #include "../codecs/wm8962.h"
 #include "../codecs/wm8960.h"
 #include "../codecs/wm8904.h"
+#include "../codecs/tas6424.h"
 
 #define CS427x_SYSCLK_MCLK 0
+#define TAS6424_SYSCLK_MCLK 0
 
 #define RX 0
 #define TX 1
@@ -491,6 +493,9 @@ static int fsl_asoc_card_late_probe(struct snd_soc_card *card)
 		return 0;
 	}
 
+        dev_err(dev, "mclk_id: %d - mclk_freq: %ld", codec_priv->mclk_id,
+                                codec_priv->mclk_freq);
+
 	ret = snd_soc_dai_set_sysclk(codec_dai, codec_priv->mclk_id,
 				     codec_priv->mclk_freq, SND_SOC_CLOCK_IN);
 	if (ret) {
@@ -600,6 +605,14 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 		priv->codec_priv.pll_id = WM8904_FLL_MCLK;
 		priv->codec_priv.pll_src = WM8904_FLL_MCLK;
 		priv->dai_fmt |= SND_SOC_DAIFMT_CBM_CFM;
+	} else if (of_device_is_compatible(np, "fsl,imx-audio-tas6424")) {
+		codec_dai_name = "tas6424-amplifier";
+		priv->card.set_bias_level = NULL;
+                priv->codec_priv.mclk_id = TAS6424_SYSCLK_MCLK;
+		priv->codec_priv.fll_id = TAS6424_SYSCLK_MCLK;
+		priv->codec_priv.pll_id = TAS6424_SYSCLK_MCLK;
+		priv->codec_priv.pll_src = TAS6424_SYSCLK_MCLK;
+		priv->dai_fmt |= SND_SOC_DAIFMT_CBS_CFS;
 	} else if (of_device_is_compatible(np, "fsl,imx-audio-ac97")) {
 		codec_dai_name = "ac97-hifi";
 		priv->card.set_bias_level = NULL;
@@ -748,6 +761,7 @@ static const struct of_device_id fsl_asoc_card_dt_ids[] = {
 	{ .compatible = "fsl,imx-audio-wm8962", },
 	{ .compatible = "fsl,imx-audio-wm8960", },
 	{ .compatible = "fsl,imx-audio-wm8904", },
+	{ .compatible = "fsl,imx-audio-tas6424", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, fsl_asoc_card_dt_ids);

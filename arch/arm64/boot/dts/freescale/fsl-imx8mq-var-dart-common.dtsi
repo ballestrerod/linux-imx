@@ -795,9 +795,9 @@
 &pcie1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie1>;
-	reset-gpio = <&gpio4 19 GPIO_ACTIVE_LOW>;
+/*	reset-gpio = <&gpio4 19 GPIO_ACTIVE_LOW>; */
 	ext_osc = <1>;
-	status = "disabled";
+	status = "okay";
 };
 
 /* Console */
