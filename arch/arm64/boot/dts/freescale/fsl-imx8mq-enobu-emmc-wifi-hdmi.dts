@@ -261,10 +261,11 @@
 
                 pinctrl_audiopw: audiopwgrp {
                         fsl,pins = <
-                                MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21               0x00000016  /* AUDIOPOW_WARN (?)  */
-                                MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23               0x00000016  /* AUDIOPOW_FAULT (?) */
-                                MX8MQ_IOMUXC_SAI5_RXC_GPIO3_IO20                0x00000016  /* AUDIOPOW_MUTE (?)  */
-                                MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22               0x00001816  /* AUDIOPOW_STBY (?)  */
+                                MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21               0x56  /* AUDIOPOW_WARN  (?)  */
+                                MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23               0x56  /* AUDIOPOW_FAULT (?)  */
+
+                                MX8MQ_IOMUXC_SAI5_RXC_GPIO3_IO20                0x56  /* AUDIOPOW_MUTE  (?)  */
+                                MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22               0x56  /* AUDIOPOW_STBY  (?)  */
                         >;
                 };
 
@@ -822,8 +823,9 @@
                  * mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
                  */
                  
-                standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
-                mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
+                 
+                standby-gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;   /* sono invertiti sulla schematica */
+                mute-gpios = <&gpio3 22 GPIO_ACTIVE_LOW>;      /* sono invertiti sulla schematica */
 
                 interrupts = <&gpio3 21 IRQ_TYPE_EDGE_FALLING>,
                              <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
