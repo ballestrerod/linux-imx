@@ -116,6 +116,13 @@ config XILINX_PR_DECOUPLER
 	  region of the FPGA from the busses while that region is
 	  being reprogrammed during partial reconfig.
 
+config ENOBU_HPS2FPGA 
+	tristate "Leonardo eNOBU HPS to FPGA"
+	depends on FPGA_BRIDGE
+	depends on HAS_IOMEM
+	help
+	  Say Y to enable drivers for eNOBU Host Processor to FPGA bridge.
+
 config FPGA_REGION
 	tristate "FPGA Region"
 	depends on FPGA_BRIDGE

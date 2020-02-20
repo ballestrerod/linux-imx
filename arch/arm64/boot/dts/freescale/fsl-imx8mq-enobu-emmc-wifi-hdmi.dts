@@ -128,14 +128,7 @@
 				<192000>;
 		status = "disabled";
 	};
-/*
-	fpga-region0 {
-		compatible = "fpga-region";
-		fpga-mgr = <&fpga_mgr_spi>;
-		#address-cells = <0x1>;
-		#size-cells = <0x1>;
-	};
-*/
+
 	spi_fpga: spi-fpga {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_spifpga>;
@@ -148,22 +141,34 @@
 		gpio-mosi = <&gpio3 6 GPIO_ACTIVE_HIGH>;
 		cs-gpios = <&gpio3 1 GPIO_ACTIVE_HIGH>;
 		num-chipselects = <1>;
-
 		status = "okay";
 		
+                /* FPGA Lattice MachXO3LF */
+                fpga_mgr: fpga-mgr@0 {
+			compatible = "lattice,machxo2-slave-spi";
+			reg = <0>;
+			spi-max-frequency = <100000>;
+                        status = "disabled";
+		};
+
+/*
                 spi@0 {
 			compatible = "spidev";
 			reg = <0>;
 			spi-max-frequency = <100000>;
-		};
+		}; 
+*/
 
-                /* FPGA Lattice MachXO3LF 
-                fpga_mgr_spi: fpga-mgr@0 {
-			compatible = "lattice,machxo2-slave-spi";
-			reg = <0>;
-			spi-max-frequency = <8000000>;
-		};
-                */
+        };
+
+        fpga_bridge0: fpga-bridge@0 {
+                compatible = "lnrd,enobu-hps2fpga";
+                spi-ctrl = <&spi_fpga>;
+                
+                fpga-region0 {
+                	compatible = "fpga-region";
+                	fpga-mgr = <&fpga_mgr>;
+                };
         };
 };
 
@@ -779,10 +784,10 @@
 
         /* TODO popolare con
          *
-         * - TPS2388   poe pse controller
+         * - TPS2388   poe pse controller (porte 1-4)
          *      reg = <0x20>;
 	 *   
-         * - TPS2388   poe pse controller
+         * - TPS2388   poe pse controller (porte 5-8)
          *      reg = <0x21>;
          */
 
