@@ -52,44 +52,6 @@ static int mv88e6352_serdes_power_set(struct mv88e6xxx_chip *chip, bool on)
 	if (val != new_val)
 		err = mv88e6352_serdes_write(chip, MII_BMCR, new_val);
 
-
-        /* DEBUG */
-	err = mv88e6352_serdes_read(chip, 0x0, &val);
-	if (err)
-		return err;
-        dev_dbg(chip->dev, "FIBER CONTROL 0x%x", val);
-
-	err = mv88e6352_serdes_read(chip, 0x1, &val);
-	if (err)
-		return err;
-        dev_dbg(chip->dev, "FIBER STATUS 0x%x", val);
-	
-        err = mv88e6352_serdes_read(chip, 0x4, &val);
-	if (err)
-		return err;
-        dev_dbg(chip->dev, "FIBER AUTO-NEG 0x%x", val);
-        
-        err = mv88e6352_serdes_read(chip, 0x5, &val);
-	if (err)
-		return err;
-        dev_dbg(chip->dev, "FIBER LINK PARTNER 0x%x", val);
-        
-        err = mv88e6352_serdes_read(chip, 0x6, &val);
-	if (err)
-		return err;
-        dev_dbg(chip->dev, "FIBER AUTO-NEG EXP 0x%x", val);
-        /* DEBUG */
-
-	err = mv88e6352_serdes_read(chip, 0x10, &val);
-	if (err)
-		return err;
-        dev_dbg(chip->dev, "FIBER SPECIFIC CONTROL 1 0x%x", val);
-
-	err = mv88e6352_serdes_read(chip, 0x11, &val);
-	if (err)
-		return err;
-        dev_dbg(chip->dev, "FIBER SPECIFIC STATUS 0x%x", val);
-
 	return err;
 }
 
@@ -97,10 +59,15 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
 {
 	int err;
 	u8 cmode;
+        u16 val;
+
+        dev_err(chip->dev, "p%d: ----> SERDES POWER", port);
 
 	err = mv88e6xxx_port_get_cmode(chip, port, &cmode);
 	if (err)
 		return err;
+        
+        dev_err(chip->dev, "p%d: ----> CMODE %x", port, cmode);
 
 	if ((cmode == MV88E6XXX_PORT_STS_CMODE_100BASE_X) ||
 	    (cmode == MV88E6XXX_PORT_STS_CMODE_1000BASE_X) ||
@@ -108,6 +75,47 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
 		err = mv88e6352_serdes_power_set(chip, on);
 		if (err < 0)
 			return err;
+
+                /* DEBUG */
+                err = mv88e6352_serdes_read(chip, 0x0, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: FIBER CONTROL [reg 0] 0x%04x", port, val);
+                
+                err = mv88e6352_serdes_read(chip, 0x1, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: FIBER STATUS [reg 1] 0x%04x", port, val);
+                
+                err = mv88e6352_serdes_read(chip, 0x4, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: FIBER AUTO-NEG [reg 4] 0x%04x", port, val);
+                
+                err = mv88e6352_serdes_read(chip, 0x5, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: FIBER LINK PARTNER [reg 5] 0x%04x", port, val);
+                
+                err = mv88e6352_serdes_read(chip, 0x6, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: FIBER AUTO-NEG EXP [reg 6] 0x%04x", port, val);
+                
+                err = mv88e6352_serdes_read(chip, 0xf, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: EXTENDED STATUS REGISTER [reg 15] 0x%04x", port, val);
+                
+                err = mv88e6352_serdes_read(chip, 0x10, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: FIBER SPECIFIC CONTROL 1 [reg 16] 0x%04x", port, val);
+                
+                err = mv88e6352_serdes_read(chip, 0x11, &val);
+                if (err)
+                	return err;
+                dev_dbg(chip->dev, "p%d: FIBER SPECIFIC STATUS [reg 17] 0x%04x", port, val);
 	}
 
 	return 0;

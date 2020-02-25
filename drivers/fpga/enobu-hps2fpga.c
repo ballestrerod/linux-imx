@@ -24,20 +24,10 @@
 #include <linux/module.h>
 #include <linux/fpga/fpga-bridge.h>
 
-
-
-#define CTRL_OFFSET		0
-
-#define FPGA_READ	(1 << 15)
-#define FPGA_WRITE	(0 << 15)
-
-#define AD_CNT(x)	((((x) - 1) & 0x7) << 12)
-#define AD_ADDR(x)	((x) & 0x1FFF)
+#include "machxo-efb.h"
 
 
 struct enobu_hps2fpga_data {
-	// void __iomem *io_base;
-	// struct clk *clk;
         struct spi_device *spifpga;
 };
 
@@ -106,79 +96,6 @@ const struct regmap_config enobu_hps2fpga_regmap_config = {
 EXPORT_SYMBOL_GPL(enobu_hps2fpga_regmap_config);
 
 
-static inline void enobu_hps2fpga_write(struct enobu_hps2fpga_data *d,
-					   u32 reg, u32 val)
-{
-        struct spi_device *spifpga = d->spifpga;
-	u8 buf[3];
-	u16 cmd;
-	int ret;
-
-        printk(KERN_ERR "%s: write\n", __func__);
-
-	spifpga->mode = SPI_MODE_0;
-
-	cmd = FPGA_WRITE | AD_CNT(1) | AD_ADDR(reg);
-
-	ret = spi_write(spifpga, &buf, sizeof(buf));
-	if (ret < 0) {
-		dev_err(&spifpga->dev, "failed to set sensor mode.\n");
-	}
-}
-
-
-static inline u8 enobu_hps2fpga_read(const struct enobu_hps2fpga_data *d,
-					u32 reg)
-{
-#if 0        
-	struct spi_device *spifpga = d->spifpga;
-	struct spi_message msg;
-	struct spi_transfer rx, tx;
-	static u16 cmd;
-        unsigned long status;
-	int ret;
-
-        cmd = FPGA_READ | AD_CNT(1) | AD_ADDR(reg);
-	
-        memset(&rx, 0, sizeof(rx));
-	memset(&tx, 0, sizeof(tx));
-	tx.tx_buf = &cmd;
-	tx.len = sizeof(cmd);
-	rx.rx_buf = &status;
-	rx.len = 4;
-	spi_message_init(&msg);
-	spi_message_add_tail(&tx, &msg);
-	spi_message_add_tail(&rx, &msg);
-
-	ret = spi_sync(spifpga, &msg);
-	if (ret)
-		return ret;
-#endif
-
-        struct spi_device *spifpga = d->spifpga;
-	u8 buf[2], rbuf;
-	u16 cmd;
-	int ret;
-
-        printk(KERN_ERR "%s: read\n", __func__);
-
-        spifpga->mode = SPI_MODE_0;
-
-        cmd = FPGA_READ | AD_CNT(1) | AD_ADDR(reg);
-	
-	buf[0] = cmd >> 8;
-	buf[1] = cmd & 0xFFF;
-
-	ret = spi_write_then_read(spifpga, &buf[0], 2, (void *)&rbuf, 1);
-	if (ret < 0) {
-                dev_err(&spifpga->dev, "Read Error %d", ret);
-                return ret;
-        }
-
-        return rbuf;
-}
-
-
 static int enobu_hps2fpga_enable_set(struct fpga_bridge *bridge, bool enable)
 {
 	struct enobu_hps2fpga_data *priv = bridge->priv;
@@ -232,7 +149,7 @@ MODULE_DEVICE_TABLE(of, enobu_hps2fpga_of_match);
 
 
 
-
+#if 0
 
 #define MY_BUS_NUM 3
 static struct spi_device *spi_device;
@@ -282,7 +199,7 @@ static int __init enobu_hps2fpga_spi_init(struct enobu_hps2fpga_data *priv)
     return 0;
 }
 
-
+#endif
 
 
 static int enobu_hps2fpga_probe(struct platform_device *pdev)
@@ -316,10 +233,10 @@ static int enobu_hps2fpga_probe(struct platform_device *pdev)
         dev_err(&pdev->dev, "Platform device name: %s\n", spifpga_pdev->name);
 
 
-        enobu_hps2fpga_spi_init(priv);
+//DEBUG        enobu_hps2fpga_spi_init(priv);
 
 
-//      priv->spifpga = to_spi_device(&spifpga_pdev->dev);
+        priv->spifpga = to_spi_device(&spifpga_pdev->dev);
 // 
 // 	priv->spifpga->bits_per_word = 8;
 // 	
@@ -364,10 +281,10 @@ static int enobu_hps2fpga_probe(struct platform_device *pdev)
 	if (err)
 	        dev_err(&pdev->dev, "unable to register eNOBU HPS2FPGA Bridge");
 
-        dev_err(&pdev->dev, "FPGA: ver %d.%d   [hw ver %d]\n", 
-                        enobu_hps2fpga_read(priv, ENOBU_HPS2FPGA_VER), 
-                        enobu_hps2fpga_read(priv, ENOBU_HPS2FPGA_REV), 
-                        enobu_hps2fpga_read(priv, ENOBU_HPS2FPGA_HWVER));
+        dev_err(&pdev->dev, "FPGA: ver %d.%d [hw ver %d]\n", 
+                        efb_spi_read(ENOBU_HPS2FPGA_VER), 
+                        efb_spi_read(ENOBU_HPS2FPGA_REV), 
+                        efb_spi_read(ENOBU_HPS2FPGA_HWVER));
 
 fail:
 	// clk_unprepare(priv->clk);

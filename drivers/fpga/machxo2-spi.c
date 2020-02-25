@@ -15,6 +15,112 @@
 #include <linux/of.h>
 #include <linux/spi/spi.h>
 
+#include "machxo-efb.h"
+
+static struct spi_device *efb_spi;
+
+#if 0        
+static inline u8 enobu_hps2fpga_read(const struct enobu_hps2fpga_data *d,
+					u32 reg)
+{
+	struct spi_device *spifpga = d->spifpga;
+	struct spi_message msg;
+	struct spi_transfer rx, tx;
+	static u16 cmd;
+        unsigned long status;
+	int ret;
+
+        cmd = FPGA_READ | AD_CNT(1) | AD_ADDR(reg);
+	
+        memset(&rx, 0, sizeof(rx));
+	memset(&tx, 0, sizeof(tx));
+	tx.tx_buf = &cmd;
+	tx.len = sizeof(cmd);
+	rx.rx_buf = &status;
+	rx.len = 4;
+	spi_message_init(&msg);
+	spi_message_add_tail(&tx, &msg);
+	spi_message_add_tail(&rx, &msg);
+
+	ret = spi_sync(spifpga, &msg);
+	if (ret)
+		return ret;
+}
+#endif
+
+
+
+int __efb_spi_read(struct spi_device *spi, u16 reg)
+{
+	u8 buf[2], rbuf;
+	u16 cmd;
+	int ret;
+
+        spi->mode = SPI_MODE_0;
+
+        cmd = FPGA_READ | AD_CNT(1) | AD_ADDR(reg);
+	
+	buf[0] = cmd >> 8;
+	buf[1] = cmd & 0xFFF;
+
+	ret = spi_write_then_read(spi, &buf[0], 2, (void *)&rbuf, 1);
+	if (ret < 0) {
+                dev_err(&spi->dev, "Read Error %d", ret);
+                return ret;
+        }
+
+        return rbuf;
+}
+
+
+int efb_spi_read(u16 reg)
+{
+        if (efb_spi == NULL)
+		return -EPROBE_DEFER;
+
+        return __efb_spi_read(efb_spi, reg);
+}
+EXPORT_SYMBOL_GPL(efb_spi_read);
+
+
+
+
+
+void __efb_spi_write(struct spi_device *spi, u16 reg, u8 val)
+{
+	u8 buf[3];
+	u16 cmd;
+	int ret;
+
+	spi->mode = SPI_MODE_0;
+
+	cmd = FPGA_WRITE | AD_CNT(1) | AD_ADDR(reg);
+
+        buf[0] = cmd >> 8;
+	buf[1] = cmd & 0xFF;
+	buf[2] = val;
+
+	ret = spi_write(spi, &buf, sizeof(buf));
+	if (ret < 0) {
+		dev_err(&spi->dev, "failed to set fpga register.\n");
+	}
+}
+
+void efb_spi_write(u16 reg, u8 val)
+{
+        if (efb_spi == NULL)
+		return;
+
+        __efb_spi_write(efb_spi, reg, val);
+}
+EXPORT_SYMBOL_GPL(efb_spi_write);
+
+
+
+
+
+
+
 /* MachXO2 Programming Guide - sysCONFIG Programming Commands */
 #define IDCODE_PUB		{0xe0, 0x00, 0x00, 0x00}
 #define ISC_ENABLE		{0xc6, 0x08, 0x00, 0x00}
@@ -369,12 +475,16 @@ static int machxo2_spi_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, mgr);
 
+        efb_spi = spi;
+
 	return fpga_mgr_register(mgr);
 }
 
 static int machxo2_spi_remove(struct spi_device *spi)
 {
 	struct fpga_manager *mgr = spi_get_drvdata(spi);
+        
+        efb_spi = NULL;
 
 	fpga_mgr_unregister(mgr);
 

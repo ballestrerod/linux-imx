@@ -321,6 +321,8 @@ int mv88e6390x_port_set_cmode(struct mv88e6xxx_chip *chip, int port,
 	u16 cmode;
 	int err;
 
+        dev_dbg(chip->dev, "p%d: CMODE set to %x\n", port, mode);
+
 	if (mode == PHY_INTERFACE_MODE_NA)
 		return 0;
 
@@ -371,6 +373,8 @@ int mv88e6xxx_port_get_cmode(struct mv88e6xxx_chip *chip, int port, u8 *cmode)
 	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_STS, &reg);
 	if (err)
 		return err;
+
+	dev_dbg(chip->dev, "p%d: PortStatus for CMODE %x\n", port, reg);
 
 	*cmode = reg & MV88E6XXX_PORT_STS_CMODE_MASK;
 
@@ -452,6 +456,22 @@ int mv88e6xxx_port_set_state(struct mv88e6xxx_chip *chip, int port, u8 state)
 
 	dev_dbg(chip->dev, "p%d: PortState set to %s\n", port,
 		mv88e6xxx_port_state_names[state]);
+
+	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_STS, &reg);
+	if (err)
+		return err;
+        dev_dbg(chip->dev, "p%d: PORT STATUS [reg 0] 0x%04x", port, reg);
+
+
+	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_CTL0, &reg);
+	if (err)
+		return err;
+        dev_dbg(chip->dev, "p%d: PORT CONTROL [reg 4] 0x%04x", port, reg);
+
+	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_BASE_VLAN, &reg);
+	if (err)
+		return err;
+        dev_dbg(chip->dev, "p%d: PORT BASE VLAN MAP [reg 6] 0x%04x", port, reg);
 
 	return 0;
 }
