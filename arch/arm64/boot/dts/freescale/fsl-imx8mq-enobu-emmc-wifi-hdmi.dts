@@ -144,13 +144,12 @@
 		status = "okay";
 		
                 /* FPGA Lattice MachXO3LF */
-                fpga_mgr: fpga-mgr@0 {
+               fpga_mgr: fpga-mgr@0 {
 			compatible = "lattice,machxo2-slave-spi";
 			reg = <0>;
 			spi-max-frequency = <100000>;
                         status = "okay";
 		};
-
 /*
                 spi@0 {
 			compatible = "spidev";
@@ -158,18 +157,22 @@
 			spi-max-frequency = <100000>;
 		}; 
 */
-
         };
 
-        fpga_bridge0: fpga-bridge@0 {
+/*        fpga_bridge0: fpga-bridge@0 {
                 compatible = "lnrd,enobu-hps2fpga";
                 spi-ctrl = <&spi_fpga>;
-                
+  */              
                 fpga-region0 {
                 	compatible = "fpga-region";
                 	fpga-mgr = <&fpga_mgr>;
+
+		        enobu_fpga: enobu-fpga@0 {
+		        	compatible = "leonardo,enobu-fpga-1.5";
+		        };
                 };
-        };
+ /*       };*/
+
 };
 
 
@@ -302,7 +305,7 @@
 			fsl,pins = <
 				MX8MQ_IOMUXC_UART2_RXD_UART2_DCE_RX		0x49
 				MX8MQ_IOMUXC_UART2_TXD_UART2_DCE_TX		0x49
-                                /* MX8MQ_IOMUXC_UART4_RXD_UART2_DCE_CTS_B          0x49  (?) */
+                                MX8MQ_IOMUXC_UART4_RXD_UART2_DCE_CTS_B          0x49  /* (?) */
                                 MX8MQ_IOMUXC_UART4_TXD_UART2_DCE_RTS_B          0x49  /* (?) */
 			>;
 		};
@@ -448,14 +451,15 @@
 				MX8MQ_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0xc1	/* BT_BUF_EN     */
 			>;
 		};
-
+/*
 		pinctrl_pcie0: pcie0grp {
 			fsl,pins = <
                                 MX8MQ_IOMUXC_UART4_RXD_GPIO5_IO28               0x76
-                                /* MX8MQ_IOMUXC_UART4_RXD_PCIE1_CLKREQ_B        0x76
-				/* MX8MQ_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	        0x76    open drain, pull up */
+                                / MX8MQ_IOMUXC_UART4_RXD_PCIE1_CLKREQ_B        0x76
+				/ MX8MQ_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	        0x76    open drain, pull up /
 			>;
 		};
+ */
 
                 /* present but disabled by default */
 		pinctrl_lvds: lvdsgrp {
@@ -493,19 +497,29 @@
 	phy-reset-duration = <30>;
         status = "okay";
 
+        fixed-link {
+                speed = <1000>;
+                full-duplex;
+        };
+
+
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+                interrupt-controller;
+                #interrupt-cells = <2>;
 
                 switch0: switch0@0 {
         		compatible = "marvell,mv88e6085";
         		#address-cells = <1>;
         		#size-cells = <0>;
+
         		reg = <0x18>;
         		dsa,member = <0 0>;
 
-		//	interrupt-parent = <&gpio1>;
-		//	interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+			interrupt-parent = <&gpio1>;
+			interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
  
         		ports {
         			#address-cells = <1>;
@@ -513,7 +527,7 @@
 			        
                                 switch0uplink: port@6 {
                                         reg = <6>;
-                                        label = "cpu";
+                                        // label = "cpu";
                                         ethernet = <&fec1>;
 	                                phy-mode = "rgmii";
 
@@ -550,28 +564,28 @@
   
                                 switch0downlink: port@5 {
                                         reg = <5>;
-                                        label = "dsa";
+                                        // label = "dsa";
                                         link = <&switch1uplink>;
-                                        phy-mode = "sgmii";
+                                        phy-mode = "1000base-x";
+
 				        fixed-link {
 					        speed = <1000>;
 					        full-duplex;
 				        };
                                 };
-
 	                };
-
-	        };
+                };
 
                 switch1: switch1@0 {
         		compatible = "marvell,mv88e6085";
         		#address-cells = <1>;
         		#size-cells = <0>;
+
         		reg = <0x1e>;
         		dsa,member = <0 1>;
 
-			// interrupt-parent = <&gpio1>;
-			// interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
+			interrupt-parent = <&gpio1>;
+			interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
  
         		ports {
         			#address-cells = <1>;
@@ -604,17 +618,16 @@
   
                                 switch1uplink: port@5 {
                                         reg = <5>;
-                                        label = "dsa";
+                                        // label = "dsa";
                                         link = <&switch0downlink>;
-                                        phy-mode = "sgmii";
+                                        phy-mode = "1000base-x";
+
                                         fixed-link {
 					        speed = <1000>;
 					        full-duplex;
 				        };
                                 };
-
 	                };
-
 	        };
         };
 };
@@ -915,7 +928,7 @@
 /* PCIe Switch x2 ports */
 &pcie1 {
 	ext_osc = <1>;
-	status = "disable";
+	status = "okay";
 };
 
 /* Console */

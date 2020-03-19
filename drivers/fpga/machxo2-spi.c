@@ -14,8 +14,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/spi/spi.h>
-
-#include "machxo-efb.h"
+#include <linux/fpga/machxo-efb.h>
 
 static struct spi_device *efb_spi;
 
