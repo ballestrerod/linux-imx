@@ -870,24 +870,13 @@ static void matrixdisp_write_row(u8 val, int rown)
 static void matrixdisp_chr_fill(u_int8_t *dotrow)
 {
     u_int8_t fpga_reg;
-//NO    char fpga_reg_str[5];
     int i;
 
-//DEB    printf("\nROWn: REGa\n");
-//DEB    printf("-------------\n");
-
     for (i = 0; i < MATRIX_ROW_HEIGHT; i++, dotrow++) {
-//DEB	    printf("-- DOTROW%d: 0x%02x\n", i, *dotrow);
-
         fpga_reg = *dotrow;
-//NO        sprintf(fpga_reg_str, "0x%02x", fpga_reg);
-
-//DEB	    printf("ROW%d: %s\n", i, fpga_reg_str);
 
         matrixdisp_write_row(fpga_reg, i);
     }
-
-//DEB    printf("\n");
 
     return;
 }
@@ -916,11 +905,6 @@ static int matrixdisp_chr_display(const char *dispchr)
         chr_pxl_bitmap = (char *) &matrix_bitmap[chr_offset * 5]; 
         chr_pxl_width = matrix_bitmap_descriptor[chr_offset];
  
-//DEB        printf("CHAR: %c (0x%02x)   OFFSET: %d (0x%02x) - ",
-//DEB        		*chr_str, *chr_str, chr_offset, chr_offset);
-//DEB    
-//DEB        printf("CURR WIDTH: %d + WIDTH: %d + 1\n", curr_width, chr_pxl_width);
-    
         if ((curr_width + chr_pxl_width + 1) > 7)
             break;
     
@@ -928,12 +912,7 @@ static int matrixdisp_chr_display(const char *dispchr)
         for (i = 0, dot_row_tmp = 0; i < MATRIX_ROW_HEIGHT; i++, chr_pxl_bitmap++) {
     
             dot_row_tmp = ((u_int8_t) *chr_pxl_bitmap) >> 1;
-    
-//DEB            printf("DOTROWTMP: 0x%08x   ", dot_row_tmp);
-    
             dot_row[i] |= dot_row_tmp >> curr_width;
-        
-//DEB            printf("PIXMAP: 0x%02x | >> (0x%08x)\n", *chr_pxl_bitmap, (dot_row_tmp >> curr_width));
         }
     
         /* avanzo nei pixel */
@@ -952,7 +931,6 @@ static int matrixdisp_chr_display(const char *dispchr)
 int matrixdisp_char(const char *dchr)
 {
     matrixdisp_write_mode(MATRIXDISP_MODE_FIXED);
-
     matrixdisp_chr_display(dchr);
 
     printk(KERN_ERR "[MATRIX-CHAR] %s\n", dchr);
@@ -969,38 +947,19 @@ int matrixdisp_char(const char *dchr)
 void matrixdisp_str_fill(u_int32_t *dotrow)
 {
     u_int8_t fpga_reg, fpga_regb, fpga_regc, fpga_regd;
-//NO    char fpga_reg_str[5];
-//NO    char fpga_regb_str[5];
-//NO    char fpga_regc_str[5];
-//NO    char fpga_regd_str[5];
     int i;
 
-//DEB    printf("\nROWn: REGa  REGb  REGc  REGd\n");
-//DEB    printf("------------------------------\n");
-
     for (i = 0; i < MATRIX_ROW_HEIGHT; i++, dotrow++) {
-//DEB	    printf("-- DOTROW%d: 0x%02x\n", i, *dotrow);
-
         fpga_reg = (char)((*dotrow & 0xff000000) >> 24);
         fpga_regb = (char)((*dotrow & 0x00ff0000) >> 16);
         fpga_regc = (char)((*dotrow & 0x0000ff00) >> 8);
         fpga_regd = (char)(*dotrow & 0x000000ff);
         
-//NO        sprintf(fpga_reg_str, "0x%02x", fpga_reg);
-//NO        sprintf(fpga_regb_str, "0x%02x", fpga_regb);
-//NO        sprintf(fpga_regc_str, "0x%02x", fpga_regc);
-//NO        sprintf(fpga_regd_str, "0x%02x", fpga_regd);
-
-//DEB	    printf("ROW%d: %s  %s  %s  %s\n", i, fpga_reg_str, fpga_regb_str, 
-//DEB                                                fpga_regc_str, fpga_regd_str);
-
         matrixdisp_write_row(fpga_reg, i);
         matrixdisp_write_row(fpga_regb, i + 5);
         matrixdisp_write_row(fpga_regc, i + 10);
         matrixdisp_write_row(fpga_regd, i + 15);
     }
-
-//DEB    printf("\n");
 
     return;
 }
@@ -1031,11 +990,6 @@ int matrixdisp_str_display(const char *dispstr)
         chr_pxl_bitmap = (char *) &matrix_bitmap[chr_offset * 5]; 
         chr_pxl_width = matrix_bitmap_descriptor[chr_offset];
             
-//DEB        printf("CHAR: %c (0x%02x)   OFFSET: %d (0x%02x) - ",
-//DEB        		*chr_str, *chr_str, chr_offset, chr_offset);
-//DEB    
-//DEB        printf("CURR WIDTH: %d + WIDTH: %d + 1\n", curr_width, chr_pxl_width);
-    
         if ((curr_width + chr_pxl_width + 1) > 32)
             break;
     
@@ -1043,12 +997,7 @@ int matrixdisp_str_display(const char *dispstr)
         for (i = 0, dot_row_tmp = 0; i < MATRIX_ROW_HEIGHT; i++, chr_pxl_bitmap++) {
     
             dot_row_tmp = ((u_int32_t) *chr_pxl_bitmap) << 24;
-    
-//DEB            printf("DOTROWTMP: 0x%08x   ", dot_row_tmp);
-    
             dot_row[i] |= dot_row_tmp >> curr_width;
-        
-//DEB            printf("PIXMAP: 0x%02x | >> (0x%08x)\n", *chr_pxl_bitmap, (dot_row_tmp >> curr_width));
         }
     
         /* avanzo nei pixel */
@@ -1065,7 +1014,6 @@ int matrixdisp_str_display(const char *dispstr)
 int matrixdisp_prnt(const char *dstr)
 {
     matrixdisp_write_mode(MATRIXDISP_MODE_SCROLL);
-
     matrixdisp_str_display(dstr);
 
     printk(KERN_ERR "[MATRIX-PRINT] %s\n", dstr);
