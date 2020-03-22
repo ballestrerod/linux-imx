@@ -12,7 +12,6 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/regmap.h>
@@ -98,8 +97,8 @@ static const struct mfd_cell enobu_fpga_devs[] = {
 		.name = "enobu-fpga-regulator",
 		.of_compatible = "leonardo,enobu-fpga-regulator"
 	}, {
-		.name = "enobu-fpga-led",
-		.of_compatible = "leonardo,enobu-fpga-led"
+		.name = "enobu-fpga-ledmatrix",
+		.of_compatible = "leonardo,enobu-fpga-ledmatrix"
 	},
 };
 

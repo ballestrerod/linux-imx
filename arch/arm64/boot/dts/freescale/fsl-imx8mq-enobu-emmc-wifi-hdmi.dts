@@ -159,20 +159,18 @@
 */
         };
 
-/*        fpga_bridge0: fpga-bridge@0 {
-                compatible = "lnrd,enobu-hps2fpga";
-                spi-ctrl = <&spi_fpga>;
-  */              
-                fpga-region0 {
-                	compatible = "fpga-region";
-                	fpga-mgr = <&fpga_mgr>;
-
-		        enobu_fpga: enobu-fpga@0 {
-		        	compatible = "leonardo,enobu-fpga-1.5";
-		        };
+        fpga-region0 {
+        	compatible = "fpga-region";
+        	fpga-mgr = <&fpga_mgr>;
+        
+                enobu_fpga: enobu-fpga@0 {
+             	        compatible = "leonardo,enobu-fpga-1.5";
+        
+                        ledmatrix: ledmatrix@0 {
+             	                compatible = "leonardo,enobu-fpga-ledmatrix";
+                        };
                 };
- /*       };*/
-
+        };
 };
 
 
