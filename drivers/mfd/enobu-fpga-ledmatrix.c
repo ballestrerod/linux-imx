@@ -13,6 +13,7 @@
  */
 
 #include <linux/atomic.h>
+#include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
@@ -1022,16 +1023,72 @@ int matrixdisp_prnt(const char *dstr)
 }
 
 
-static struct class *ledmatrix_class;
-
-#define DEVICE_NAME		"ledmatrix"
-static int ledmatrix_major; /* dynamic allocation */
-
 /* Device single-open policy control */
 static atomic_t ledmatrix_available = ATOMIC_INIT(1);
-static unsigned bufsiz = 64;
-u8	*ledmatrix_buffer;
 
+//OLDCHRDEV static int ledmatrix_major; /* dynamic allocation */
+//OLDCHRDEV static struct class *ledmatrix_class;
+
+#define DEVICE_NAME		"ledmatrix"
+#define LEDMATRIX_BUFSIZ        64
+
+struct enobu_ledmatrix {
+        u8	                *ledmatrix_buffer;
+	struct miscdevice       miscdev;
+        int                     mode;
+};
+
+
+static ssize_t show_ledmatrix_mode(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct enobu_ledmatrix *ldmtrx = dev_get_drvdata(dev);
+
+        //TODO or NOT read from SPI ???
+	switch (ldmtrx->mode) {
+	        case MATRIXDISP_MODE_FIXED:
+	        	return sprintf(buf, "fixed\n");
+	        case MATRIXDISP_MODE_SCROLL:
+	        	return sprintf(buf, "scroll\n");
+	        default:
+	        	return sprintf(buf, "unknown state\n");
+	}
+}
+
+
+static ssize_t store_ledmatrix_mode(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct enobu_ledmatrix *ldmtrx = dev_get_drvdata(dev);
+
+	if (sysfs_streq(buf, "fixed")) {
+                matrixdisp_write_mode(MATRIXDISP_MODE_FIXED);
+                ldmtrx->mode = MATRIXDISP_MODE_FIXED;
+        } else if (sysfs_streq(buf, "scroll")) {
+                matrixdisp_write_mode(MATRIXDISP_MODE_SCROLL);
+                ldmtrx->mode = MATRIXDISP_MODE_SCROLL;
+        } else {
+		return -EINVAL;
+	}
+
+	return n;
+}
+
+static DEVICE_ATTR(ledmatrix_mode, 0644, show_ledmatrix_mode, store_ledmatrix_mode);
+
+
+
+
+
+
+
+/* Misc device layer */
+
+static inline struct enobu_ledmatrix *to_enobu_ledmatrix_data(struct file *file)
+{
+	struct miscdevice *dev = file->private_data;
+	return container_of(dev, struct enobu_ledmatrix, miscdev);
+}
 
 
 static long enobu_ledmatrix_ioctl(struct file *filp, u_int cmd,
@@ -1055,23 +1112,23 @@ static long enobu_ledmatrix_ioctl(struct file *filp, u_int cmd,
 
 
 
-static ssize_t enobu_ledmatrix_write(struct file *filp, const char __user *buf,
+static ssize_t enobu_ledmatrix_write(struct file *file, const char __user *buf,
 			     size_t count, loff_t *ppos)
 {
-	if (count > bufsiz)
+        struct enobu_ledmatrix *ldmtrx = to_enobu_ledmatrix_data(file);
+
+	if (count > LEDMATRIX_BUFSIZ)
 		return -EMSGSIZE;
 
-	// spidev = filp->private_data;
-
 	// mutex_lock(&spidev->buf_lock);
-        //
-	if (copy_from_user(ledmatrix_buffer, buf, count))
+
+	if (copy_from_user(ldmtrx->ledmatrix_buffer, buf, count))
 		return -EFAULT;
 
-//NEXT        if (FIXED from priv data)
-//NEXT                matrixdisp_char(ledmatrix_buffer);
-//NEXT        else
-                matrixdisp_prnt(ledmatrix_buffer);
+        if (ldmtrx->mode == MATRIXDISP_MODE_FIXED)
+                matrixdisp_char(ldmtrx->ledmatrix_buffer);
+        else
+                matrixdisp_prnt(ldmtrx->ledmatrix_buffer);
 
 	// mutex_unlock(&spidev->buf_lock);
 
@@ -1079,8 +1136,9 @@ static ssize_t enobu_ledmatrix_write(struct file *filp, const char __user *buf,
 }
 
 
-static int enobu_ledmatrix_open(struct inode *inode, struct file *filp)
+static int enobu_ledmatrix_open(struct inode *inode, struct file *file)
 {
+        struct enobu_ledmatrix *ldmtrx = to_enobu_ledmatrix_data(file);
 	int ret;
 
 	ret = -EBUSY;
@@ -1088,34 +1146,36 @@ static int enobu_ledmatrix_open(struct inode *inode, struct file *filp)
 		goto fail;	/* open only once at a time */
 
 	ret = -EPERM;
-	if (filp->f_mode & FMODE_READ)	/* device is write-only */
+	if (file->f_mode & FMODE_READ)	/* device is write-only */
 		goto fail;
 
-	if (!ledmatrix_buffer) {
-		ledmatrix_buffer = kmalloc(bufsiz, GFP_KERNEL);
-		if (!ledmatrix_buffer) {
+	if (!ldmtrx->ledmatrix_buffer) {
+		ldmtrx->ledmatrix_buffer = kmalloc(LEDMATRIX_BUFSIZ, GFP_KERNEL);
+		if (!ldmtrx->ledmatrix_buffer) {
 			pr_debug("ledmatrix: open/ENOMEM\n");
 			ret = -ENOMEM;
 			goto fail;
 		}
 	}
 
-        memset(ledmatrix_buffer, 0, bufsiz);
+        memset(ldmtrx->ledmatrix_buffer, 0, LEDMATRIX_BUFSIZ);
 
-	return nonseekable_open(inode, filp);
+	return nonseekable_open(inode, file);
 
  fail:
-	kfree(ledmatrix_buffer);
-        ledmatrix_buffer = NULL;
+	kfree(ldmtrx->ledmatrix_buffer);
+        ldmtrx->ledmatrix_buffer = NULL;
 	atomic_inc(&ledmatrix_available);
 	return ret;
 }
 
 
-static int enobu_ledmatrix_release(struct inode *inode, struct file *filp)
+static int enobu_ledmatrix_release(struct inode *inode, struct file *file)
 {
-	kfree(ledmatrix_buffer);
-        ledmatrix_buffer = NULL;
+        struct enobu_ledmatrix *ldmtrx = to_enobu_ledmatrix_data(file);
+
+	kfree(ldmtrx->ledmatrix_buffer);
+        ldmtrx->ledmatrix_buffer = NULL;
 	atomic_inc(&ledmatrix_available);
 	return 0;
 }
@@ -1134,42 +1194,80 @@ static const struct file_operations enobu_ledmatrix_fops = {
 
 
 
-
 static int enobu_ledmatrix_probe(struct platform_device *pdev)
 {
-	int err = 0;
-	struct device *temp_class;
+        struct enobu_ledmatrix *ldmtrx;
+	struct device *dev = &pdev->dev;
+	int ret = 0;
         
-	ledmatrix_major = register_chrdev(ledmatrix_major, "enobu_ledmatrix", &enobu_ledmatrix_fops);
-	if (ledmatrix_major < 0) {
-		dev_err(&pdev->dev, "ledmatrix: unable to get a major for eNOBU ledmatrix\n");
-		err = -EBUSY;
-		goto error;
+	ldmtrx = devm_kzalloc(dev, sizeof(struct enobu_ledmatrix), GFP_KERNEL);
+	if (!ldmtrx)
+		return -ENOMEM;
+
+        ldmtrx->mode = MATRIXDISP_MODE_SCROLL;
+        ldmtrx->ledmatrix_buffer = NULL;
+
+	ldmtrx->miscdev.minor	= MISC_DYNAMIC_MINOR;
+	ldmtrx->miscdev.name	= DEVICE_NAME;
+	ldmtrx->miscdev.fops	= &enobu_ledmatrix_fops;
+
+        //TODO eventually request device resources
+
+	/* register misc device */
+	ret = misc_register(&ldmtrx->miscdev);
+	if (ret < 0) {
+		dev_err(dev, "misc_register() failed\n");
+		goto out;
 	}
 
-	ledmatrix_class = class_create(THIS_MODULE, "enobu_ledmatrix");
-	if (IS_ERR(ledmatrix_class)) {
-		err = PTR_ERR(ledmatrix_class);
-		goto error;
-	}
+	platform_set_drvdata(pdev, ldmtrx);
 
-	temp_class = device_create(ledmatrix_class, NULL, MKDEV(ledmatrix_major, 0),
-                                   NULL, DEVICE_NAME);
-	if (IS_ERR(temp_class)) {
-		err = PTR_ERR(temp_class);
-		goto err_out_class;
-	}
+        //TODO register sysfs files
+	/* choose ledmatrix mode */
+	ret = device_create_file(ldmtrx->miscdev.this_device,
+                                        &dev_attr_ledmatrix_mode);
+	if (ret < 0)
+		goto out;
 
-	dev_info(&pdev->dev, "eNOBU LED matrix initialized\n");
-        goto out;
+        dev_info(dev, "eNOBU LED matrix initialized\n");
+        return 0;
 
-err_out_class:
-	device_destroy(ledmatrix_class, MKDEV(ledmatrix_major, 0));
-	class_destroy(ledmatrix_class);
-error:
-	dev_err(&pdev->dev, "ledmatrix probe failed\n");
+//OLDCHRDEV	ledmatrix_major = register_chrdev(ledmatrix_major, "enobu_ledmatrix", &enobu_ledmatrix_fops);
+//OLDCHRDEV	if (ledmatrix_major < 0) {
+//OLDCHRDEV		dev_err(&pdev->dev, "ledmatrix: unable to get a major for eNOBU ledmatrix\n");
+//OLDCHRDEV		err = -EBUSY;
+//OLDCHRDEV		goto error;
+//OLDCHRDEV	}
+//OLDCHRDEV
+//OLDCHRDEV	ledmatrix_class = class_create(THIS_MODULE, "enobu_ledmatrix");
+//OLDCHRDEV	if (IS_ERR(ledmatrix_class)) {
+//OLDCHRDEV		err = PTR_ERR(ledmatrix_class);
+//OLDCHRDEV		goto error;
+//OLDCHRDEV	}
+//OLDCHRDEV
+//OLDCHRDEV	temp_class = device_create(ledmatrix_class, NULL, MKDEV(ledmatrix_major, 0),
+//OLDCHRDEV                                   NULL, DEVICE_NAME);
+//OLDCHRDEV	if (IS_ERR(temp_class)) {
+//OLDCHRDEV		err = PTR_ERR(temp_class);
+//OLDCHRDEV		goto err_out_class;
+//OLDCHRDEV	}
+//OLDCHRDEV
+//OLDCHRDEV	/* choose ledmatrix mode */
+//OLDCHRDEV	err = device_create_file(temp_class, &dev_attr_ledmatrix_mode);
+//OLDCHRDEV	if (err < 0)
+//OLDCHRDEV		goto err_out_class;
+//OLDCHRDEV
+//OLDCHRDEV	dev_info(&pdev->dev, "eNOBU LED matrix initialized\n");
+//OLDCHRDEV        goto out;
+//OLDCHRDEV
+//OLDCHRDEV     err_out_class:
+//OLDCHRDEV     	device_destroy(ledmatrix_class, MKDEV(ledmatrix_major, 0));
+//OLDCHRDEV     	class_destroy(ledmatrix_class);
+//OLDCHRDEV     error:
+//OLDCHRDEV     	dev_err(&pdev->dev, "ledmatrix probe failed\n");
+
 out:        
-	return err;
+	return ret;
 }
 
 
