@@ -66,7 +66,7 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
 	err = mv88e6xxx_port_get_cmode(chip, port, &cmode);
 	if (err)
 		return err;
-        
+
 	if ((cmode == MV88E6XXX_PORT_STS_CMODE_100BASE_X) ||
 	    (cmode == MV88E6XXX_PORT_STS_CMODE_1000BASE_X) ||
 	    (cmode == MV88E6XXX_PORT_STS_CMODE_SGMII)) {
@@ -114,27 +114,6 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
                 if (err)
                 	return err;
                 dev_dbg(chip->dev, "p%d: FIBER SPECIFIC STATUS [reg 17] 0x%04x", port, val);
-
-//                val = MV88E6XXX_PORT_CTL0_IGMP_MLD_SNOOP |
-//	        	MV88E6185_PORT_CTL0_USE_TAG | MV88E6185_PORT_CTL0_USE_IP |
-//	        	MV88E6XXX_PORT_CTL0_STATE_FORWARDING;
-//	        err = mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL0, val);
-
-
-                err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_CTL0, &val);
-                if (err)
-                        return err;
-
-                dev_dbg(chip->dev, "p%d: PORT CONTROL [reg 4] 0x%04x", port, val);
-
-	        val &= ~MV88E6352_PORT_CTL0_EGRESS_FLOODS_MASK;
-		val |= MV88E6352_PORT_CTL0_EGRESS_FLOODS_ALL_UNKNOWN_DA;
-
-	        err = mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL0, val);
-                if (err)
-                        return err;
-
-                dev_dbg(chip->dev, "p%d: {FORCED} PORT CONTROL [reg 4] 0x%04x", port, val);
 	}
 
 	return 0;

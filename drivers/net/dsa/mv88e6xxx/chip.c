@@ -1764,15 +1764,6 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
 		err = mv88e6xxx_serdes_power(chip, port, true);
 		if (err)
 			return err;
-
-                if (dsa_is_dsa_port(ds, port)) {
-                        dev_dbg(chip->dev, "Port%d is UPLINK", port);
-        	        
-                        reg = MV88E6XXX_PORT_CTL0_IGMP_MLD_SNOOP |
-        	        	MV88E6185_PORT_CTL0_USE_TAG | MV88E6185_PORT_CTL0_USE_IP |
-        	        	MV88E6XXX_PORT_CTL0_STATE_FORWARDING;
-        	        err = mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL0, reg);
-                }
 	}
 
 	/* Port Control 2: don't force a good FCS, set the maximum frame size to
@@ -2012,7 +2003,6 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
 	mutex_unlock(&chip->reg_lock);
         return 0;
 #endif /* DEBUG_NO_CPU_ATTACHED */
-
 	mutex_lock(&chip->reg_lock);
 
 	/* Setup Switch Port Registers */
@@ -3731,8 +3721,6 @@ static const char *mv88e6xxx_drv_probe(struct device *dsa_dev,
 	struct mv88e6xxx_chip *chip;
 	struct mii_bus *bus;
 	int err;
-
-        printk(KERN_ERR "----> USO drv_probe !!!! <-----\n");
 
 	bus = dsa_host_dev_to_mii_bus(host_dev);
 	if (!bus)
