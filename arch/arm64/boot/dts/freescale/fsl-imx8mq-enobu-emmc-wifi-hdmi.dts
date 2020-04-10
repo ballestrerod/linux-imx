@@ -143,22 +143,23 @@
 		num-chipselects = <1>;
 		status = "okay";
 		
-                /* FPGA Lattice MachXO3LF */
+                /* FPGA Lattice MachXO3LF 
                fpga_mgr: fpga-mgr@0 {
 			compatible = "lattice,machxo2-slave-spi";
 			reg = <0>;
 			spi-max-frequency = <100000>;
                         status = "okay";
 		};
-/*
+                */
+
                 spi@0 {
 			compatible = "spidev";
 			reg = <0>;
 			spi-max-frequency = <100000>;
 		}; 
-*/
         };
 
+/*
         fpga-region0 {
         	compatible = "fpga-region";
         	fpga-mgr = <&fpga_mgr>;
@@ -171,6 +172,8 @@
                         };
                 };
         };
+*/
+
 };
 
 
@@ -486,6 +489,26 @@
 };
 
 
+
+/* Marvell switch NO_CPU_ATTACHED mode
+&fec1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_fec1>;
+	phy-mode = "rgmii";
+	phy-reset-gpios = <&gpio3 24 GPIO_ACTIVE_LOW>;
+	phy-reset-duration = <30>;
+        status = "okay";
+
+        fixed-link {
+                speed = <1000>;
+                full-duplex;
+        };
+
+};
+*/
+
+
+/* Marvell switch linux-managed */
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
@@ -525,7 +548,7 @@
 			        
                                 switch0uplink: port@6 {
                                         reg = <6>;
-                                        // label = "cpu";
+                                        label = "cpu";
                                         ethernet = <&fec1>;
 	                                phy-mode = "rgmii";
 
@@ -562,7 +585,7 @@
   
                                 switch0downlink: port@5 {
                                         reg = <5>;
-                                        // label = "dsa";
+                                        label = "dsa";
                                         link = <&switch1uplink>;
                                         phy-mode = "1000base-x";
 
@@ -616,7 +639,7 @@
   
                                 switch1uplink: port@5 {
                                         reg = <5>;
-                                        // label = "dsa";
+                                        label = "dsa";
                                         link = <&switch0downlink>;
                                         phy-mode = "1000base-x";
 
