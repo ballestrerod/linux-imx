@@ -14,6 +14,8 @@
  * (at your option) any later version.
  */
 
+#define DEBUG
+
 #include <linux/delay.h>
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
@@ -201,8 +203,8 @@ int mv88e6xxx_read(struct mv88e6xxx_chip *chip, int addr, int reg, u16 *val)
 	if (err)
 		return err;
 
-	dev_dbg(chip->dev, "<- addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
-		addr, reg, *val);
+//	dev_dbg(chip->dev, "<- addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
+//		addr, reg, *val);
 
 	return 0;
 }
@@ -217,8 +219,8 @@ int mv88e6xxx_write(struct mv88e6xxx_chip *chip, int addr, int reg, u16 val)
 	if (err)
 		return err;
 
-	dev_dbg(chip->dev, "-> addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
-		addr, reg, val);
+//	dev_dbg(chip->dev, "-> addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
+//		addr, reg, val);
 
 	return 0;
 }
@@ -1763,31 +1765,14 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
 		if (err)
 			return err;
 
-                /* DEBUG */
-                err = mv88e6xxx_port_read(chip, port, 0x17, &reg);
-		if (err)
-			return err;
-		dev_dbg(chip->dev, "p%d: SERDES Reserved 0x17 register (%x)\n", port, reg);
-
                 if (dsa_is_dsa_port(ds, port)) {
-                        err = mv88e6xxx_port_write(chip, port, 0x17, 0x8505);
-		        if (err)
-			        return err;
-                
-                        err = mv88e6xxx_port_write(chip, port, 0x17, 0x8080);
-		        if (err)
-			        return err;
-                
-                        err = mv88e6xxx_port_write(chip, port, 0x17, 0x9);
-		        if (err)
-			        return err;
-                
-                        err = mv88e6xxx_port_read(chip, port, 0x17, &reg);
-		        if (err)
-		        	return err;
-		        dev_dbg(chip->dev, "p%d: SERDES Reserved 0x17 register (%x)\n", port, reg);
+                        dev_dbg(chip->dev, "Port%d is UPLINK", port);
+        	        
+                        reg = MV88E6XXX_PORT_CTL0_IGMP_MLD_SNOOP |
+        	        	MV88E6185_PORT_CTL0_USE_TAG | MV88E6185_PORT_CTL0_USE_IP |
+        	        	MV88E6XXX_PORT_CTL0_STATE_FORWARDING;
+        	        err = mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL0, reg);
                 }
-                
 	}
 
 	/* Port Control 2: don't force a good FCS, set the maximum frame size to
@@ -2010,9 +1995,23 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int err;
 	int i;
+#ifdef DEBUG_NO_CPU_ATTACHED
+        u16 val;
+#endif /* DEBUG_NO_CPU_ATTACHED */
 
 	chip->ds = ds;
 	ds->slave_mii_bus = mv88e6xxx_default_mdio_bus(chip);
+
+#ifdef DEBUG_NO_CPU_ATTACHED
+	mutex_lock(&chip->reg_lock);
+   	err = mv88e6xxx_port_read(chip, 5, MV88E6XXX_PORT_CTL0, &val);
+	if (err)
+                dev_dbg(chip->dev, "error reading port5 PORT_CTL0");
+
+        dev_dbg(chip->dev, "port5 control val %x", val);
+	mutex_unlock(&chip->reg_lock);
+        return 0;
+#endif /* DEBUG_NO_CPU_ATTACHED */
 
 	mutex_lock(&chip->reg_lock);
 
@@ -3733,6 +3732,8 @@ static const char *mv88e6xxx_drv_probe(struct device *dsa_dev,
 	struct mii_bus *bus;
 	int err;
 
+        printk(KERN_ERR "----> USO drv_probe !!!! <-----\n");
+
 	bus = dsa_host_dev_to_mii_bus(host_dev);
 	if (!bus)
 		return NULL;
@@ -3914,11 +3915,13 @@ static int mv88e6xxx_probe(struct mdio_device *mdiodev)
 	    !of_property_read_u32(np, "eeprom-length", &eeprom_len))
 		chip->eeprom_len = eeprom_len;
 
+#ifndef DEBUG_NO_CPU_ATTACHED
 	mutex_lock(&chip->reg_lock);
 	err = mv88e6xxx_switch_reset(chip);
 	mutex_unlock(&chip->reg_lock);
 	if (err)
 		goto out;
+#endif /* DEBUG_NO_CPU_ATTACHED */
 
 	chip->irq = of_irq_get(np, 0);
 	if (chip->irq == -EPROBE_DEFER) {

@@ -12,6 +12,8 @@
  * (at your option) any later version.
  */
 
+#define DEBUG
+
 #include <linux/bitfield.h>
 #include <linux/if_bridge.h>
 #include <linux/phy.h>
@@ -604,6 +606,9 @@ int mv88e6352_port_set_egress_floods(struct mv88e6xxx_chip *chip, int port,
 		reg |= MV88E6352_PORT_CTL0_EGRESS_FLOODS_NO_UNKNOWN_UC_DA;
 	else
 		reg |= MV88E6352_PORT_CTL0_EGRESS_FLOODS_NO_UNKNOWN_DA;
+
+	dev_dbg(chip->dev, "p%d: Egress Flood %s:%s (0x%02X)\n", port, 
+                        unicast?"ucast":'\0', multicast?"mcast":'\0', reg);
 
 	return mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL0, reg);
 }
