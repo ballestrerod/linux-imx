@@ -1245,8 +1245,6 @@ out:
 }
 
 
-
-
 static const struct of_device_id enobu_ledmatrix_of_match[] = {
 	{ .compatible = "leonardo,enobu-fpga-ledmatrix" },
 	{ }

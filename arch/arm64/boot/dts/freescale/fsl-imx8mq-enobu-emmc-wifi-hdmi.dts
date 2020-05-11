@@ -112,8 +112,6 @@
 		status = "okay";
 	};
 
-
-
         modem_codec: enobu-fpga-auxaudio {
                 compatible = "leonardo,enobu-fpga-auxaudio";
                 #sound-dai-cells = <0>;
@@ -136,8 +134,6 @@
                     sound-dai = <&modem_codec>;
                 };
         };
-
-
 
 	sound-hdmi {
 		compatible = "fsl,imx8mq-evk-cdnhdmi",
@@ -170,23 +166,25 @@
 		num-chipselects = <1>;
 		status = "okay";
 		
-                /* FPGA Lattice MachXO3LF 
+               /* FPGA Lattice MachXO3LF */
                fpga_mgr: fpga-mgr@0 {
 			compatible = "lattice,machxo2-slave-spi";
 			reg = <0>;
 			spi-max-frequency = <100000>;
                         status = "okay";
 		};
-                */
 
+                /* debug SPI toward FPGA 
                 spi@0 {
 			compatible = "spidev";
 			reg = <0>;
 			spi-max-frequency = <100000>;
-		}; 
+		};
+                */
         };
 
 /*
+*/
         fpga-region0 {
         	compatible = "fpga-region";
         	fpga-mgr = <&fpga_mgr>;
@@ -197,10 +195,12 @@
                         ledmatrix: ledmatrix@0 {
              	                compatible = "leonardo,enobu-fpga-ledmatrix";
                         };
+                        
+                        gpioreg: gpioreg@0 {
+             	                compatible = "leonardo,enobu-fpga-gpioreg";
+                        };
                 };
         };
-*/
-
 };
 
 
@@ -481,15 +481,6 @@
 				MX8MQ_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0xc1	/* BT_BUF_EN     */
 			>;
 		};
-/*
-		pinctrl_pcie0: pcie0grp {
-			fsl,pins = <
-                                MX8MQ_IOMUXC_UART4_RXD_GPIO5_IO28               0x76
-                                / MX8MQ_IOMUXC_UART4_RXD_PCIE1_CLKREQ_B        0x76
-				/ MX8MQ_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	        0x76    open drain, pull up /
-			>;
-		};
- */
 
                 /* present but disabled by default */
 		pinctrl_lvds: lvdsgrp {
@@ -967,10 +958,6 @@
 
 /* M.2 Module 1 */
 &pcie0 {
-/*	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie0>;
-        clkreq-gpio = <&gpio5 28 GPIO_ACTIVE_HIGH>;
-*/
 	ext_osc = <1>;
 	status = "okay";
 };

@@ -91,11 +91,8 @@ struct enobu_fpga_chip {
 
 static const struct mfd_cell enobu_fpga_devs[] = {
 	{
-		.name = "enobu-fpga-reset",
-		.of_compatible = "leonardo,enobu-fpga-reset"
-	}, {
-		.name = "enobu-fpga-regulator",
-		.of_compatible = "leonardo,enobu-fpga-regulator"
+		.name = "enobu-fpga-gpioreg",
+		.of_compatible = "leonardo,enobu-fpga-gpioreg"
 	}, {
 		.name = "enobu-fpga-ledmatrix",
 		.of_compatible = "leonardo,enobu-fpga-ledmatrix"
@@ -151,19 +148,12 @@ static const struct of_device_id enobu_fpga_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, enobu_fpga_of_match);
 
-static const struct platform_device_id enobu_fpga_id[] = {
-	{ "enobu_fpga", 0 },
-	{ },
-};
-MODULE_DEVICE_TABLE(platform, enobu_fpga_id);
-
 static struct platform_driver enobu_fpga_driver = {
 	.probe = enobu_fpga_probe,
 	.driver = {
 		.name = "enobu-fpga-1.5",
-		.of_match_table = of_match_ptr(enobu_fpga_of_match),
+		.of_match_table = enobu_fpga_of_match,
 	},
-	.id_table = enobu_fpga_id,
 };
 
 module_platform_driver(enobu_fpga_driver);
