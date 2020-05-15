@@ -276,13 +276,10 @@ static inline u8 dsa_upstream_port(struct dsa_switch *ds)
 	 * Else return the (DSA) port number that connects to the
 	 * switch that is one hop closer to the cpu.
 	 */
-	if (dst->cpu_dp->ds == ds) {
-                printk(KERN_DEBUG "CPU upstream port: %d\n", dst->cpu_dp->index);
+	if (dst->cpu_dp->ds == ds)
 		return dst->cpu_dp->index;
-        } else {
-                printk(KERN_DEBUG "DSA upstream port: %d\n", ds->rtable[dst->cpu_dp->ds->index]);
+        else
 		return ds->rtable[dst->cpu_dp->ds->index];
-        }
 }
 
 typedef int dsa_fdb_dump_cb_t(const unsigned char *addr, u16 vid,

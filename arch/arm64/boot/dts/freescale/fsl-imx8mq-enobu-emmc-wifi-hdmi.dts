@@ -174,24 +174,27 @@
                         status = "okay";
 		};
 
-                /* debug SPI toward FPGA 
+                /* debug SPI toward FPGA
                 spi@0 {
 			compatible = "spidev";
 			reg = <0>;
 			spi-max-frequency = <100000>;
-		};
-                */
+		}; */
         };
 
-/*
-*/
+/**/
         fpga-region0 {
         	compatible = "fpga-region";
         	fpga-mgr = <&fpga_mgr>;
         
                 enobu_fpga: enobu-fpga@0 {
+		        pinctrl-names = "default";
+		        pinctrl-0 = <&pinctrl_fpga>;
              	        compatible = "leonardo,enobu-fpga-1.5";
-        
+                        
+			interrupt-parent = <&gpio1>;
+  		        interrupts = <11 IRQ_TYPE_EDGE_FALLING>; 
+  		        
                         ledmatrix: ledmatrix@0 {
              	                compatible = "leonardo,enobu-fpga-ledmatrix";
                         };
@@ -307,7 +310,10 @@
 
                 pinctrl_fpga: fpgagrp {
                         fsl,pins = <
-                                MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19             0x00000016  /* FPGA_INITN (?) */
+                                MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1               0xc1  /* FPGA_PROGRAMN       */
+                                MX8MQ_IOMUXC_GPIO1_IO15_GPIO1_IO15              0xc1  /* FPGA_DONE           */
+                                MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19             0xc1  /* FPGA_INITN (???)    */
+                                MX8MQ_IOMUXC_GPIO1_IO11_GPIO1_IO11              0xc1  /* FPGA_IRQ (oppure)   */
                         >;
                 };
 
@@ -548,7 +554,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-                interrupt-controller;
+                // interrupt-controller;
                 #interrupt-cells = <2>;
 
                 switch0: switch0@0 {

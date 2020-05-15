@@ -11,7 +11,7 @@
  * (at your option) any later version.
  */
 
-#define DEBUG
+//TODO #define DEBUG
 
 #include <linux/mii.h>
 
@@ -74,7 +74,7 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
 		if (err < 0)
 			return err;
 
-                /* DEBUG */
+                /* DEBUG
                 err = mv88e6352_serdes_read(chip, 0x0, &val);
                 if (err)
                 	return err;
@@ -114,6 +114,7 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
                 if (err)
                 	return err;
                 dev_dbg(chip->dev, "p%d: FIBER SPECIFIC STATUS [reg 17] 0x%04x", port, val);
+                */
 	}
 
 	return 0;

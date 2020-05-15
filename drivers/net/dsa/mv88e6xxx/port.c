@@ -12,7 +12,7 @@
  * (at your option) any later version.
  */
 
-#define DEBUG
+//TODO #define DEBUG
 
 #include <linux/bitfield.h>
 #include <linux/if_bridge.h>

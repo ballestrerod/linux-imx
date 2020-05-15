@@ -1,17 +1,20 @@
 #include <linux/module.h>
+#include <linux/irq.h>
 #include <linux/platform_device.h>
 #include <linux/gpio/driver.h>
 #include <linux/gpio/gpio-reg.h>
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/fpga/machxo-efb.h>
+
 
 struct enobu_gpioreg {
 	struct gpio_chip gc;
 	spinlock_t lock;
-	u32 direction;
-	u32 out;
-	void __iomem *reg;
+	u8 direction;
+	u8 out;
+	u16 fpga_reg;
 	struct irq_domain *irqdomain;
 	const int *irqs;
 };
@@ -48,7 +51,7 @@ static void enobu_gpioreg_set(struct gpio_chip *gc, unsigned offset, int value)
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
 	unsigned long flags;
-	u32 val, mask = BIT(offset);
+	u8 val, mask = BIT(offset);
 
 	spin_lock_irqsave(&r->lock, flags);
 	val = r->out;
@@ -57,22 +60,24 @@ static void enobu_gpioreg_set(struct gpio_chip *gc, unsigned offset, int value)
 	else
 		val &= ~mask;
 	r->out = val;
-	writel_relaxed(val, r->reg);
+	// CHG writel_relaxed(val, r->reg);
+        efb_spi_write(r->fpga_reg, val);
 	spin_unlock_irqrestore(&r->lock, flags);
 }
 
 static int enobu_gpioreg_get(struct gpio_chip *gc, unsigned offset)
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
-	u32 val, mask = BIT(offset);
+	u8 val, mask = BIT(offset);
 
 	if (r->direction & mask) {
 		/*
 		 * double-read the value, some registers latch after the
 		 * first read.
 		 */
-		readl_relaxed(r->reg);
-		val = readl_relaxed(r->reg);
+		// read readl_relaxed(r->reg);
+		// val = readl_relaxed(r->reg);
+                val = efb_spi_read(r->fpga_reg);
 	} else {
 		val = r->out;
 	}
@@ -87,7 +92,8 @@ static void enobu_gpioreg_set_multiple(struct gpio_chip *gc, unsigned long *mask
 
 	spin_lock_irqsave(&r->lock, flags);
 	r->out = (r->out & ~*mask) | (*bits & *mask);
-	writel_relaxed(r->out, r->reg);
+	// CHG writel_relaxed(r->out, r->reg);
+        efb_spi_write(r->fpga_reg, r->out);
 	spin_unlock_irqrestore(&r->lock, flags);
 }
 
@@ -123,8 +129,8 @@ static int enobu_gpioreg_to_irq(struct gpio_chip *gc, unsigned offset)
  * then after a double-read.  Output values are assumed not to be
  * readable.
  */
-struct gpio_chip *enobu_gpioreg_init(struct device *dev, void __iomem *reg,
-	int base, int num, const char *label, u32 direction, u32 def_out,
+struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
+	int base, int num, const char *label, u8 direction, u8 def_out,
 	const char *const *names, struct irq_domain *irqdom, const int *irqs)
 {
 	struct enobu_gpioreg *r;
@@ -154,7 +160,7 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, void __iomem *reg,
 	r->gc.names = names;
 	r->direction = direction;
 	r->out = def_out;
-	r->reg = reg;
+	r->fpga_reg = fpga_reg;
 	r->irqs = irqs;
 
 	if (dev)
@@ -171,17 +177,153 @@ int gpio_reg_resume(struct gpio_chip *gc)
 	unsigned long flags;
 
 	spin_lock_irqsave(&r->lock, flags);
-	writel_relaxed(r->out, r->reg);
+	// writel_relaxed(r->out, r->reg);
 	spin_unlock_irqrestore(&r->lock, flags);
 
 	return 0;
 }
 
+
+
+
+
+
+
+static const char *m2_slot1_names[] = {
+	"sl1_reset", "sl1_w_disable1", "sl1_fullcard_poweroff",
+};
+
+#define ENOBU_FPGA_M2_SL1               0x00
+#define ENOBU_FPGA_M2_SL1_RST           (1<<0)
+#define ENOBU_FPGA_M2_SL1_DIS           (1<<1)
+#define ENOBU_FPGA_M2_SL1_POFF          (1<<2)
+
+static const char *m2_slot2_names[] = {
+	"sl2_reset", "sl2_w_disable1", "sl2_fullcard_poweroff",
+};
+
+
+#define ENOBU_FPGA_M2_SL2               0x01
+#define ENOBU_FPGA_M2_SL2_RST           (1<<0)
+#define ENOBU_FPGA_M2_SL2_DIS           (1<<1)
+#define ENOBU_FPGA_M2_SL2_POFF          (1<<2)
+
+static const char *usb_hub_names[] = {
+	"hub_ctl1", "hub_ctl2", "hub_ctl3", "hub_ctl4",
+        NULL, NULL, "hub_reset", "hub_vbus", 
+};
+
+#define ENOBU_FPGA_USB_HUB              0x02
+#define ENOBU_FPGA_USB_HUB_CTL1         (1<<0)
+#define ENOBU_FPGA_USB_HUB_CTL2         (1<<1)
+#define ENOBU_FPGA_USB_HUB_CTL3         (1<<2)
+#define ENOBU_FPGA_USB_HUB_CTL4         (1<<3)
+#define ENOBU_FPGA_USB_HUB_RST          (1<<6)
+#define ENOBU_FPGA_USB_HUB_VBUS         (1<<7)
+
+#define ENOBU_FPGA_USB_HUB_DEFAULT \
+	(ENOBU_FPGA_USB_HUB_CTL1  | ENOBU_FPGA_USB_HUB_CTL2 | \
+	 ENOBU_FPGA_USB_HUB_CTL3 | ENOBU_FPGA_USB_HUB_CTL4 )
+
+static const char *uart_comm_names[] = {
+	NULL, "fast_mode", "loopback",
+};
+
+#define ENOBU_FPGA_UART_COMM            0x03
+#define ENOBU_FPGA_UART_COMM_FASTM      (1<<1)
+#define ENOBU_FPGA_UART_COMM_LOOPB      (1<<2)
+
+static const char *uart2_conf_names[] = {
+	"uart2_term", "uart2_mode", "uart2_txena", "uart2_rxena",
+        NULL, NULL, NULL, "uart2_duplex",
+};
+
+#define ENOBU_FPGA_UART2_CONF           0x04
+#define ENOBU_FPGA_UART2_CONF_TERM      (1<<0)
+#define ENOBU_FPGA_UART2_CONF_MODE      (1<<1)
+#define ENOBU_FPGA_UART2_CONF_TXEN      (1<<2)
+#define ENOBU_FPGA_UART2_CONF_RXEN      (1<<2)
+#define ENOBU_FPGA_UART2_CONF_DUPL      (1<<7)
+
+static const char *uart3_conf_names[] = {
+	"uart3_term", "uart3_mode", "uart3_txena", "uart3_rxena",
+        NULL, NULL, NULL, "uart3_duplex",
+};
+
+#define ENOBU_FPGA_UART3_CONF           0x05
+#define ENOBU_FPGA_UART3_CONF_TERM      (1<<0)
+#define ENOBU_FPGA_UART3_CONF_MODE      (1<<1)
+#define ENOBU_FPGA_UART3_CONF_TXEN      (1<<2)
+#define ENOBU_FPGA_UART3_CONF_RXEN      (1<<2)
+#define ENOBU_FPGA_UART3_CONF_DUPL      (1<<7)
+
+static const char *digital_out_names[] = {
+	"out1", "out2", "out3",
+};
+
+#define ENOBU_FPGA_DOUT       0x09
+#define ENOBU_FPGA_DOUT1      (1<<0)
+#define ENOBU_FPGA_DOUT2      (1<<1)
+#define ENOBU_FPGA_DOUT3      (1<<2)
+
+static const char *digital_inp_names[] = {
+	"inp1", "inp2", "inp3", "inp4",
+        "inp5", "inp6", "inp7"
+};
+
+#define ENOBU_FPGA_DINP       0x0a
+#define ENOBU_FPGA_DINP1      (1<<0)
+#define ENOBU_FPGA_DINP2      (1<<1)
+#define ENOBU_FPGA_DINP3      (1<<2)
+#define ENOBU_FPGA_DINP4      (1<<3)
+#define ENOBU_FPGA_DINP5      (1<<4)
+#define ENOBU_FPGA_DINP6      (1<<5)
+#define ENOBU_FPGA_DINP7      (1<<6)
+
+static const char *reset_dev_names[] = {
+	"reset_pcie", "reset_hd",
+};
+
+#define ENOBU_FPGA_RSTDEV       0x16
+#define ENOBU_FPGA_RSTDEV_PCIE  (1<<0)
+#define ENOBU_FPGA_RSTDEV_HD    (1<<1)
+
+
+
 static int enobu_gpioreg_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	// struct gpio_chip *gc;
 	int ret = 0;
-        
+	u8 def_val = 0;
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_M2_SL1, -1, 3, "m2_slot1", 0,
+                           def_val, m2_slot1_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_M2_SL2, -1, 3, "m2_slot2", 0,
+                           def_val, m2_slot2_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_USB_HUB, -1, 8, "usb_hub", 0,
+                           ENOBU_FPGA_USB_HUB_DEFAULT, usb_hub_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_UART_COMM, -1, 3, "uart_common", 0,
+                           def_val, uart_comm_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_UART2_CONF, -1, 8, "uart2_conf", 0,
+                           def_val, uart2_conf_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_UART3_CONF, -1, 8, "uart3_conf", 0,
+                           def_val, uart3_conf_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_DOUT, -1, 3, "digital_out", 0,
+                           def_val, digital_out_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_DINP, -1, 7, "digital_inp", 0x7f,
+                           def_val, digital_inp_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_RSTDEV, -1, 2, "reset_dev", 0,
+                           def_val, reset_dev_names, NULL, NULL);
+
         dev_info(dev, "eNOBU GPIO registers initialized\n");
         return ret;
 }

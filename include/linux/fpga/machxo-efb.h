@@ -10,5 +10,5 @@
 
 
 int efb_spi_read(u16 reg);
-void efb_spi_write(u16 reg, u8 val);
+int efb_spi_write(u16 reg, u8 val);
 

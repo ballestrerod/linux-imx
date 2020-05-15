@@ -8,6 +8,8 @@
  * Copyright (C) 2018 Paolo Pisati <p.pisati@gmail.com>
  */
 
+#define DEBUG
+
 #include <linux/delay.h>
 #include <linux/fpga/fpga-mgr.h>
 #include <linux/gpio/consumer.h>
@@ -85,7 +87,7 @@ EXPORT_SYMBOL_GPL(efb_spi_read);
 
 
 
-void __efb_spi_write(struct spi_device *spi, u16 reg, u8 val)
+int __efb_spi_write(struct spi_device *spi, u16 reg, u8 val)
 {
 	u8 buf[3];
 	u16 cmd;
@@ -103,14 +105,16 @@ void __efb_spi_write(struct spi_device *spi, u16 reg, u8 val)
 	if (ret < 0) {
 		dev_err(&spi->dev, "failed to set fpga register.\n");
 	}
+
+        return ret;
 }
 
-void efb_spi_write(u16 reg, u8 val)
+int efb_spi_write(u16 reg, u8 val)
 {
         if (efb_spi == NULL)
-		return;
+		return -EPROBE_DEFER;
 
-        __efb_spi_write(efb_spi, reg, val);
+        return __efb_spi_write(efb_spi, reg, val);
 }
 EXPORT_SYMBOL_GPL(efb_spi_write);
 
