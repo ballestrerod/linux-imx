@@ -9,6 +9,6 @@
 
 
 
-int efb_spi_read(u16 reg);
+int efb_spi_read(u16 reg, u8 *val);
 int efb_spi_write(u16 reg, u8 val);
 

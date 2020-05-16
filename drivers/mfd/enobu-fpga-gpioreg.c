@@ -77,7 +77,7 @@ static int enobu_gpioreg_get(struct gpio_chip *gc, unsigned offset)
 		 */
 		// read readl_relaxed(r->reg);
 		// val = readl_relaxed(r->reg);
-                val = efb_spi_read(r->fpga_reg);
+                efb_spi_read(r->fpga_reg, &val);
 	} else {
 		val = r->out;
 	}

@@ -169,6 +169,7 @@ static irqreturn_t enobufpga_irq(int irq, void *data)
 
 static int enobu_fpga_probe(struct platform_device *pdev)
 {
+        u8 ver, rev, hwver;
 	int ret;
 //NEXT	unsigned int id;
 	struct enobu_fpga_chip *enobufpga;
@@ -209,11 +210,12 @@ static int enobu_fpga_probe(struct platform_device *pdev)
 //NEXT		dev_err(enobufpga->dev, "Failed to read chip id: %d\n", ret);
 //NEXT		return ret;
 //NEXT	}
-        
-        dev_err(&pdev->dev, "eNOBU-FPGA: ver %d.%d [hw ver %d]\n", 
-                        efb_spi_read(ENOBU_HPS2FPGA_VER), 
-                        efb_spi_read(ENOBU_HPS2FPGA_REV), 
-                        efb_spi_read(ENOBU_HPS2FPGA_HWVER));
+
+        efb_spi_read(ENOBU_HPS2FPGA_VER, &ver); 
+        efb_spi_read(ENOBU_HPS2FPGA_REV, &rev);
+        efb_spi_read(ENOBU_HPS2FPGA_HWVER, &hwver);
+
+        dev_err(&pdev->dev, "eNOBU-FPGA: ver %d.%d [hw ver %d]\n", ver, rev, hwver);
 
         ret = devm_mfd_add_devices(&pdev->dev, -1, enobu_fpga_devs,
                                    ARRAY_SIZE(enobu_fpga_devs), NULL,

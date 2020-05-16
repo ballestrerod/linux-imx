@@ -51,7 +51,7 @@ static inline u8 enobu_hps2fpga_read(const struct enobu_hps2fpga_data *d,
 
 
 
-int __efb_spi_read(struct spi_device *spi, u16 reg)
+int __efb_spi_read(struct spi_device *spi, u16 reg, u8 *val)
 {
 	u8 buf[2], rbuf;
 	u16 cmd;
@@ -64,22 +64,22 @@ int __efb_spi_read(struct spi_device *spi, u16 reg)
 	buf[0] = cmd >> 8;
 	buf[1] = cmd & 0xFFF;
 
-	ret = spi_write_then_read(spi, &buf[0], 2, (void *)&rbuf, 1);
+	ret = spi_write_then_read(spi, &buf[0], 2, (void *)val, 1);
 	if (ret < 0) {
                 dev_err(&spi->dev, "Read Error %d", ret);
                 return ret;
         }
 
-        return rbuf;
+        return ret;
 }
 
 
-int efb_spi_read(u16 reg)
+int efb_spi_read(u16 reg, u8 *val)
 {
         if (efb_spi == NULL)
 		return -EPROBE_DEFER;
 
-        return __efb_spi_read(efb_spi, reg);
+        return __efb_spi_read(efb_spi, reg, val);
 }
 EXPORT_SYMBOL_GPL(efb_spi_read);
 
