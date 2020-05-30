@@ -85,22 +85,6 @@
 		clock-frequency = <20000000>;
 	};
 
-	sound-wm8904 {
-		compatible = "fsl,imx-audio-wm8904";
-		model = "imx-wm8904";
-		audio-cpu = <&sai3>;
-		audio-codec = <&wm8904>;
-		audio-routing =
-			"Headphone Jack", "HPOUTL",
-			"Headphone Jack", "HPOUTR",
-			"IN2L", "Line In Jack",
-			"IN2R", "Line In Jack",
-			"IN1L", "Mic Jack",
-			"Playback", "CPU-Playback",
-			"CPU-Capture", "Capture";
-		status = "okay";
-	};
-
 	sound-tas6424 {
 		compatible = "fsl,imx-audio-tas6424";
 		model = "imx-tas6424";
@@ -112,7 +96,7 @@
 		status = "okay";
 	};
 
-        modem_codec: enobu-fpga-auxaudio {
+        modem_codec: enobu-fpga-auxaudio@0 {
                 compatible = "leonardo,enobu-fpga-auxaudio";
                 #sound-dai-cells = <0>;
         };
@@ -134,6 +118,22 @@
                     sound-dai = <&modem_codec>;
                 };
         };
+
+	sound-wm8904 {
+		compatible = "fsl,imx-audio-wm8904";
+		model = "imx-wm8904";
+		audio-cpu = <&sai3>;
+		audio-codec = <&wm8904>;
+		audio-routing =
+			"Headphone Jack", "HPOUTL",
+			"Headphone Jack", "HPOUTR",
+			"IN2L", "Line In Jack",
+			"IN2R", "Line In Jack",
+			"IN1L", "Mic Jack",
+			"Playback", "CPU-Playback",
+			"CPU-Capture", "Capture";
+		status = "okay";
+	};
 
 	sound-hdmi {
 		compatible = "fsl,imx8mq-evk-cdnhdmi",
@@ -197,6 +197,10 @@
   		        
                         ledmatrix: ledmatrix@0 {
              	                compatible = "leonardo,enobu-fpga-ledmatrix";
+                        };
+                        
+                        leds: leds@0 {
+             	                compatible = "leonardo,enobu-fpga-leds";
                         };
                         
                         gpioreg: gpioreg@0 {

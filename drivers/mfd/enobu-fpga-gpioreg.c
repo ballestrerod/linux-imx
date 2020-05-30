@@ -261,6 +261,15 @@ static const char *digital_out_names[] = {
 	"out1", "out2", "out3",
 };
 
+#define ENOBU_FPGA_HANDSFREE            0x06
+#define ENOBU_FPGA_HANDSFREE_ONOFF      (1<<1)
+#define ENOBU_FPGA_HANDSFREE_HOOK       (1<<7)
+
+static const char *handsfree_names[] = {
+	NULL, "on_off", NULL, NULL, 
+        NULL, NULL, NULL, "hook"
+};
+
 #define ENOBU_FPGA_DOUT       0x09
 #define ENOBU_FPGA_DOUT1      (1<<0)
 #define ENOBU_FPGA_DOUT2      (1<<1)
@@ -314,6 +323,9 @@ static int enobu_gpioreg_probe(struct platform_device *pdev)
 
 	enobu_gpioreg_init(dev, ENOBU_FPGA_UART3_CONF, -1, 8, "uart3_conf", 0,
                            def_val, uart3_conf_names, NULL, NULL);
+
+	enobu_gpioreg_init(dev, ENOBU_FPGA_HANDSFREE, -1, 8, "handsfree", 0,
+                           def_val, handsfree_names, NULL, NULL);
 
 	enobu_gpioreg_init(dev, ENOBU_FPGA_DOUT, -1, 3, "digital_out", 0,
                            def_val, digital_out_names, NULL, NULL);

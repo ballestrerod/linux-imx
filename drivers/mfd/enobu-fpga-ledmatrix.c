@@ -1254,7 +1254,7 @@ MODULE_DEVICE_TABLE(of, enobu_ledmatrix_of_match);
 static struct platform_driver enobu_ledmatrix_driver = {
 	.probe = enobu_ledmatrix_probe,
 	.driver = {
-		.name = "enobu_fpga_ledmatrix",
+		.name = "enobu-fpga-ledmatrix",
 		.of_match_table = of_match_ptr(enobu_ledmatrix_of_match),
 	},
 };

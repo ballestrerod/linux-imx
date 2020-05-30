@@ -110,6 +110,9 @@ static const struct mfd_cell enobu_fpga_devs[] = {
 	}, {
 		.name = "enobu-fpga-ledmatrix",
 		.of_compatible = "leonardo,enobu-fpga-ledmatrix"
+	}, {
+		.name = "enobu-fpga-leds",
+		.of_compatible = "leonardo,enobu-fpga-leds"
 	},
 };
 
