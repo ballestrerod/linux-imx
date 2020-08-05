@@ -3,6 +3,7 @@
 #include <linux/platform_device.h>
 #include <linux/gpio/driver.h>
 #include <linux/gpio/gpio-reg.h>
+#include <linux/of_gpio.h>
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
@@ -84,6 +85,17 @@ static int enobu_gpioreg_get(struct gpio_chip *gc, unsigned offset)
 	return !!(val & mask);
 }
 
+static int enobu_gpioreg_request(struct gpio_chip *gc, unsigned offset)
+{
+        return 0;
+}
+
+static void enobu_gpioreg_free(struct gpio_chip *gc, unsigned offset)
+{
+        return;
+}
+
+
 static void enobu_gpioreg_set_multiple(struct gpio_chip *gc, unsigned long *mask,
 	unsigned long *bits)
 {
@@ -107,6 +119,24 @@ static int enobu_gpioreg_to_irq(struct gpio_chip *gc, unsigned offset)
 
 	return irq;
 }
+
+static int fpga_gpioreg_of_xlate(struct gpio_chip *gc,
+			    const struct of_phandle_args *gpiospec, u32 *flags)
+{
+	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
+
+        pr_debug ("fpga_gpiochip REG %x: %s  base %d args[%d]: %d %d\n", 
+                        r->fpga_reg, gc->label, gc->base, gpiospec->args_count, gpiospec->args[0], gpiospec->args[1]);
+
+	if (r->fpga_reg != gpiospec->args[0])
+		return -EINVAL;
+
+	if (flags)
+		*flags = gpiospec->args[2];
+
+	return gpiospec->args[1];
+}
+
 
 /**
  * gpio_reg_init - add a fixed in/out register as gpio
@@ -152,12 +182,20 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
 	r->gc.direction_output = enobu_gpioreg_direction_output;
 	r->gc.set = enobu_gpioreg_set;
 	r->gc.get = enobu_gpioreg_get;
+	r->gc.request = enobu_gpioreg_request;
+	r->gc.free = enobu_gpioreg_free;
 	r->gc.set_multiple = enobu_gpioreg_set_multiple;
 	if (irqs)
 		r->gc.to_irq = enobu_gpioreg_to_irq;
 	r->gc.base = base;
+	r->gc.parent = dev;
 	r->gc.ngpio = num;
 	r->gc.names = names;
+
+	r->gc.of_gpio_n_cells = 3;
+        r->gc.of_node = dev->of_node;
+        r->gc.of_xlate = fpga_gpioreg_of_xlate;
+
 	r->direction = direction;
 	r->out = def_out;
 	r->fpga_reg = fpga_reg;
@@ -182,7 +220,6 @@ int gpio_reg_resume(struct gpio_chip *gc)
 
 	return 0;
 }
-
 
 
 
@@ -242,7 +279,7 @@ static const char *uart2_conf_names[] = {
 #define ENOBU_FPGA_UART2_CONF_TERM      (1<<0)
 #define ENOBU_FPGA_UART2_CONF_MODE      (1<<1)
 #define ENOBU_FPGA_UART2_CONF_TXEN      (1<<2)
-#define ENOBU_FPGA_UART2_CONF_RXEN      (1<<2)
+#define ENOBU_FPGA_UART2_CONF_RXEN      (1<<3)
 #define ENOBU_FPGA_UART2_CONF_DUPL      (1<<7)
 
 static const char *uart3_conf_names[] = {
@@ -254,7 +291,7 @@ static const char *uart3_conf_names[] = {
 #define ENOBU_FPGA_UART3_CONF_TERM      (1<<0)
 #define ENOBU_FPGA_UART3_CONF_MODE      (1<<1)
 #define ENOBU_FPGA_UART3_CONF_TXEN      (1<<2)
-#define ENOBU_FPGA_UART3_CONF_RXEN      (1<<2)
+#define ENOBU_FPGA_UART3_CONF_RXEN      (1<<3)
 #define ENOBU_FPGA_UART3_CONF_DUPL      (1<<7)
 
 static const char *digital_out_names[] = {
@@ -324,7 +361,7 @@ static int enobu_gpioreg_probe(struct platform_device *pdev)
 	enobu_gpioreg_init(dev, ENOBU_FPGA_UART3_CONF, -1, 8, "uart3_conf", 0,
                            def_val, uart3_conf_names, NULL, NULL);
 
-	enobu_gpioreg_init(dev, ENOBU_FPGA_HANDSFREE, -1, 8, "handsfree", 0,
+	enobu_gpioreg_init(dev, ENOBU_FPGA_HANDSFREE, -1, 8, "handsfree", 0x80,
                            def_val, handsfree_names, NULL, NULL);
 
 	enobu_gpioreg_init(dev, ENOBU_FPGA_DOUT, -1, 3, "digital_out", 0,

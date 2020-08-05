@@ -129,7 +129,6 @@
 			"Headphone Jack", "HPOUTR",
 			"IN2L", "Line In Jack",
 			"IN2R", "Line In Jack",
-			"IN1L", "Mic Jack",
 			"Playback", "CPU-Playback",
 			"CPU-Capture", "Capture";
 		status = "okay";
@@ -205,6 +204,8 @@
                         
                         gpioreg: gpioreg@0 {
              	                compatible = "leonardo,enobu-fpga-gpioreg";
+                                gpio-controller;
+                                #gpio-cells = <3>;
                         };
                 };
         };
@@ -627,6 +628,7 @@
 	                };
                 };
 
+
                 switch1: switch1@0 {
         		compatible = "marvell,mv88e6085";
         		#address-cells = <1>;
@@ -905,6 +907,8 @@
 		compatible = "microchip,usb5744";
 		reg = <0x7f>;
 
+		reset-gpios = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
+
 		/* TODO 
                  * nel caso facessimo passare i GPIO da fpga a uP,
                  * agganciare la funzione del segnale di reset.
@@ -934,6 +938,8 @@
         pcie_sw: pi7c9x2g404@6f {
 		compatible = "pericom,pi7c9x2g404";
 		reg = <0x6f>;
+                reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;    //TODO modificare come prendo il GPIO usando bank14 gpio 0
+                                                                   //     occorre definire una funzione di xlate
         };
 
         /* TODO popolare con
