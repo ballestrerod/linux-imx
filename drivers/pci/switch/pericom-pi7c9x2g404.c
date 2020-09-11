@@ -72,7 +72,7 @@ static int pi7c9x2g404_probe(struct i2c_client *client, const struct i2c_device_
 	// u8 val[I2C_SMBUS_BLOCK_MAX] = {0};
 	u8 port = 0x00;
 	// u16 val;
-        int i, ret;
+        int ret;
 	
         i2c_set_clientdata(client, data);
 
@@ -82,7 +82,7 @@ static int pi7c9x2g404_probe(struct i2c_client *client, const struct i2c_device_
                 if (PTR_ERR(data->reset_gpio) == -EPROBE_DEFER)
 		        return PTR_ERR(data->reset_gpio);
                 
-                dev_err(dev, "Failed to bind reset gpio: %d", PTR_ERR(data->reset_gpio));
+                dev_err(dev, "Failed to bind reset gpio: %ld", PTR_ERR(data->reset_gpio));
 	}
 
 	/* Toggle RESET_N to reset the hub. */
@@ -101,6 +101,8 @@ static int pi7c9x2g404_probe(struct i2c_client *client, const struct i2c_device_
                 dev_info(dev, "PCIe Bus DeviceID Reg: 0x%04x\n", (u16) ret);
 
 #ifdef PERICOM_DEBUG
+        int i;
+
         for (port = 0; port <= 3; port++) {
                 for (i = 0x00; i < 0xff; i++, i++) {
                         val = i2c_smbus_write_word_data(client, 0x08, ((port << 8) | i));

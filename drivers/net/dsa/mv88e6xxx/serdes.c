@@ -61,7 +61,6 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
 {
 	int err;
 	u8 cmode;
-        u16 val;
 
 	err = mv88e6xxx_port_get_cmode(chip, port, &cmode);
 	if (err)
@@ -75,6 +74,8 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
 			return err;
 
                 /* DEBUG
+                u16 val;
+
                 err = mv88e6352_serdes_read(chip, 0x0, &val);
                 if (err)
                 	return err;

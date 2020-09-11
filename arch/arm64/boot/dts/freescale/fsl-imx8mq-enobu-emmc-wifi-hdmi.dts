@@ -907,18 +907,9 @@
 		compatible = "microchip,usb5744";
 		reg = <0x7f>;
 
-		reset-gpios = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
-
-		/* TODO 
-                 * nel caso facessimo passare i GPIO da fpga a uP,
-                 * agganciare la funzione del segnale di reset.
-                 *
-                 * pinctrl-names = "default";
-		 * pinctrl-0 = <&pinctrl_usb5744>;
-		 * reset-gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
-                 */
+		reset-gpio = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
+		vbus-gpio = <&gpioreg 0x2 7 GPIO_ACTIVE_LOW>;
 	};
-
 };
 
 &i2c3 {
@@ -938,8 +929,7 @@
         pcie_sw: pi7c9x2g404@6f {
 		compatible = "pericom,pi7c9x2g404";
 		reg = <0x6f>;
-                reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;    //TODO modificare come prendo il GPIO usando bank14 gpio 0
-                                                                   //     occorre definire una funzione di xlate
+                reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
         };
 
         /* TODO popolare con
