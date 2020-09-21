@@ -624,7 +624,7 @@
 					        speed = <1000>;
 					        full-duplex;
 				        };
-                                };
+						};
 	                };
                 };
 
@@ -639,6 +639,9 @@
 
 			interrupt-parent = <&gpio1>;
 			interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
+
+			/* Disabilitato per scheda di laboratorio che ha il secondo switch rotto *
+			status = "disabled"; */
  
         		ports {
         			#address-cells = <1>;
@@ -675,14 +678,14 @@
                                         link = <&switch0downlink>;
                                         phy-mode = "1000base-x";
 
-                                        fixed-link {
+                          fixed-link {
 					        speed = <1000>;
 					        full-duplex;
-				        };
-                                };
+							};
+						};
 	                };
-	        };
-        };
+			};
+		};
 };
 
 
@@ -832,75 +835,125 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-        /* IIS2DH  accelerometro */
-        accel: iis2dh@18 {
-  		compatible = "st,iis2dh_accel";
-  		reg = <0x18>;
+		/* IIS2DH accelerometro */
+		accel: iis2dh@18 {
+		compatible = "st,iis2dh_accel";
+		reg = <0x18>;
 
-                /* TODO 
-                 * per ora gli irq passano da FPGA,
-                 * valutare se farseli arrivare direttamente al
-                 * micro.
-                 *
-                 * interrupt-parent = <&gpio1>;
-  		 * interrupts = <26 IRQ_TYPE_LEVEL_HIGH>, 
-                 *              <27 IRQ_TYPE_LEVEL_HIGH>;
-                 */
-        };
+		/* TODO
+		 * per ora gli irq passano da FPGA,
+		 * valutare se farseli arrivare direttamente al
+		 * micro.
+		 *
+		 * interrupt-parent = <&gpio1>;
+		 * interrupts = <26 IRQ_TYPE_LEVEL_HIGH>,
+		 *              <27 IRQ_TYPE_LEVEL_HIGH>;
+		 */
+		};
 
-        /* TODO popolare con
-         *
-         * - TPS2388   poe pse controller (porte 1-4)
-         *      reg = <0x20>;
-	 *   
-         * - TPS2388   poe pse controller (porte 5-8)
-         *      reg = <0x21>;
-         */
+		/* TPS2388 poe PSE controller (8 ports) */
+		tps2388@20 {
+			compatible = "ti,tps2388";
+			reg = <0x20>;
+			ieee_enable = <1>;
+
+			/* Each port <0..3> has:
+				op_mode: off, manual, auto
+				det_class_en: 0, 1
+			 */
+			port@0 {
+				id = <0>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+			port@1 {
+				id = <1>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+			port@2 {
+				id = <2>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+			port@3 {
+				id = <3>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+		};
+
+		tps2388@21 {
+			compatible = "ti,tps2388";
+			reg = <0x21>;
+			ieee_enable = <1>;
+			//status = "disabled";
+
+			port@0 {
+				id = <0>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+			port@1 {
+				id = <1>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+			port@2 {
+				id = <2>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+			port@3 {
+				id = <3>;
+				op_mode = "auto";
+				det_class_en = <1>;
+			};
+		};
 
         /* RTC8564 real time clock */
-	pcf8564@51 {
-		compatible = "nxp,pcf8563";
-		reg = <0x51>;
-	};
+		pcf8564@51 {
+			compatible = "nxp,pcf8563";
+			reg = <0x51>;
+		};
 
         /* M24512 eeprom */
-        eeprom@57 {
-		compatible = "atmel,24c512";
-		reg = <0x57>;
-	};
+		eeprom@57 {
+			compatible = "atmel,24c512";
+			reg = <0x57>;
+		};
 
         /* TAS6424 power codec */
-        tas6424: tas6424@6a {
-	        compatible = "ti,tas6424";
-	        reg = <0x6a>;
+		tas6424: tas6424@6a {
+			compatible = "ti,tas6424";
+			reg = <0x6a>;
 
-		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
-		clock-names = "mclk";
+			clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
+			clock-names = "mclk";
 
-                pinctrl-names = "default";
-	        pinctrl-0 = <&pinctrl_audiopw>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_audiopw>;
 
-		pvdd-supply = <&reg_audiopwr>;
-		vbat-supply = <&reg_audiopwr>;
-		dvdd-supply = <&reg_audio>;
+			pvdd-supply = <&reg_audiopwr>;
+			vbat-supply = <&reg_audiopwr>;
+			dvdd-supply = <&reg_audio>;
 
-	        #sound-dai-cells = <0>;
+			#sound-dai-cells = <0>;
 
-                /* TODO 
-                 * prendere dalla versione successiva di kernel gli agganci
-                 * per definire e gestire i seguenti GPIO.
-                 *
-                 * standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
-                 * mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
-                 */
-                 
-                 
-                standby-gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;   /* sono invertiti sulla schematica */
-                mute-gpios = <&gpio3 22 GPIO_ACTIVE_LOW>;      /* sono invertiti sulla schematica */
+			/* TODO
+			 * prendere dalla versione successiva di kernel gli agganci
+			 * per definire e gestire i seguenti GPIO.
+			 *
+			 * standby-gpios = <&gpio3 22 GPIO_ACTIVE_HIGH>;
+			 * mute-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
+			 */
 
-                interrupts = <&gpio3 21 IRQ_TYPE_EDGE_FALLING>,
-                             <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
-        };
+			standby-gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;   /* sono invertiti sulla schematica */
+			mute-gpios = <&gpio3 22 GPIO_ACTIVE_LOW>;      /* sono invertiti sulla schematica */
+
+			interrupts = <&gpio3 21 IRQ_TYPE_EDGE_FALLING>,
+						 <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
+	};
 
         /* USB5744T  usb hub */
         usb3_hub: usb5744@2d {

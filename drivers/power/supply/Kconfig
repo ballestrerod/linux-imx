@@ -624,4 +624,10 @@ config CHARGER_RT9455
 	help
 	  Say Y to enable support for Richtek RT9455 battery charger.
 
+config CHARGER_TPS2388
+	depends on I2C
+	tristate "TPS2388 PoE driver"
+	help
+	 Say Y here to enable support for PoE with TPS2388
+
 endif # POWER_SUPPLY
