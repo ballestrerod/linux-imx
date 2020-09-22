@@ -172,7 +172,7 @@
 			spi-max-frequency = <100000>;
                         status = "okay";
 		};
-
+                
                 /* debug SPI toward FPGA
                 spi@0 {
 			compatible = "spidev";
@@ -181,15 +181,14 @@
 		}; */
         };
 
-/**/
         fpga-region0 {
         	compatible = "fpga-region";
         	fpga-mgr = <&fpga_mgr>;
-        
+                        
                 enobu_fpga: enobu-fpga@0 {
 		        pinctrl-names = "default";
 		        pinctrl-0 = <&pinctrl_fpga>;
-             	        compatible = "leonardo,enobu-fpga-1.5";
+             	        compatible = "leonardo,enobu-fpga";
                         
 			interrupt-parent = <&gpio1>;
   		        interrupts = <11 IRQ_TYPE_EDGE_FALLING>; 
@@ -503,6 +502,12 @@
 		pinctrl_usbotg: usbotggrp {
 			fsl,pins = <
                                 MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12              0xc1   /* usb_otg_pwr_en */
+			>;
+		};
+
+		pinctrl_pcie0: pcie0grp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_SAI1_TXD7_GPIO4_IO19		0x16
 			>;
 		};
 	};
@@ -964,6 +969,9 @@
 
 /* M.2 Module 1 */
 &pcie0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie0>;
+	reset-gpio = <&gpio4 19 GPIO_ACTIVE_LOW>;
 	ext_osc = <1>;
 	status = "okay";
 };

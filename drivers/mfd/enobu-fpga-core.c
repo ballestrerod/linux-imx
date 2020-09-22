@@ -27,8 +27,11 @@
 #define ENOBU_HPS2FPGA_M2_SLOT2			0x001
 #define ENOBU_HPS2FPGA_USB_HUB			0x002
 
+#define ENOBU_HPS2FPGA_IRQ1			0x018
 #define ENOBU_HPS2FPGA_IRQ2			0x019
-#define ENOBU_HPS2FPGA_DINP			0x01a
+#define ENOBU_HPS2FPGA_IRQ1_MASK		0x01a
+#define ENOBU_HPS2FPGA_IRQ2_MASK		0x01b
+
 #define ENOBU_HPS2FPGA_KEYMNG			0x020
 
 #define ENOBU_HPS2FPGA_TEST1                    0x100
@@ -132,7 +135,7 @@ static irqreturn_t enobufpga_irq(int irq, void *data)
 
 #ifdef ENOBU_FPGA_IRQ_HANDLER        
 	struct enobu_fpga_chip *enobufpga = data;
-	int irqreg;
+	u8 irqreg;
 
 	/* Leggo il registro degli INTERRUPT2 per capire la fonte */
 	if ((irqreg = efb_spi_read(ENOBU_HPS2FPGA_IRQ2)) < 0) {
@@ -167,6 +170,40 @@ static irqreturn_t enobufpga_irq(int irq, void *data)
 
 	return ret;
 }
+
+
+
+
+
+static ssize_t show_fpga_irq_test(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+        u8 irq2;
+        
+        efb_spi_read(ENOBU_HPS2FPGA_IRQ2, &irq2);
+
+       	return sprintf(buf, "%x\n", irq2);
+}
+
+
+static ssize_t store_fpga_irq_test(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+        efb_spi_write(ENOBU_HPS2FPGA_IRQ2, 0x80);
+
+	return n;
+}
+
+static DEVICE_ATTR(fpga_irq_test, 0644, show_fpga_irq_test, store_fpga_irq_test);
+
+
+
+
+
+
+
+
+
 
 
 
@@ -220,6 +257,13 @@ static int enobu_fpga_probe(struct platform_device *pdev)
 
         dev_err(&pdev->dev, "eNOBU-FPGA: ver %d.%d [hw ver %d]\n", ver, rev, hwver);
 
+	/* IRQ test trigger file and init */
+        efb_spi_write(ENOBU_HPS2FPGA_IRQ2_MASK, 0x7F);
+
+	ret = device_create_file(enobufpga->dev, &dev_attr_fpga_irq_test);
+	if (ret < 0)
+		goto out;
+
         ret = devm_mfd_add_devices(&pdev->dev, -1, enobu_fpga_devs,
                                    ARRAY_SIZE(enobu_fpga_devs), NULL,
                                    0, NULL);
@@ -227,11 +271,12 @@ static int enobu_fpga_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to add child devices: %d\n", ret);
 	}
 
+out:
 	return ret;
 }
 
 static const struct of_device_id enobu_fpga_of_match[] = {
-	{ .compatible = "leonardo,enobu-fpga-1.5" },
+	{ .compatible = "leonardo,enobu-fpga" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, enobu_fpga_of_match);
@@ -239,7 +284,7 @@ MODULE_DEVICE_TABLE(of, enobu_fpga_of_match);
 static struct platform_driver enobu_fpga_driver = {
 	.probe = enobu_fpga_probe,
 	.driver = {
-		.name = "enobu-fpga-1.5",
+		.name = "enobu-fpga",
 		.of_match_table = enobu_fpga_of_match,
 	},
 };
