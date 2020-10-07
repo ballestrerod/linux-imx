@@ -78,7 +78,7 @@
                 };
 	};
 
-        /* CFPX-180 quartz crystal */
+	/* CFPX-180 quartz crystal */
 	can_osc: can0_osc {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -278,17 +278,18 @@
 			>;
 		};
 
-                /* to CAN controller */
-                pinctrl_ecspi2: ecspi2grp {
-                        fsl,pins = <
-                                MX8MQ_IOMUXC_ECSPI2_MISO_ECSPI2_MISO 		0x13      
-                                MX8MQ_IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI 		0x13      
-                                MX8MQ_IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK 		0x13      
-                                MX8MQ_IOMUXC_ECSPI2_SS0_GPIO5_IO13       	0x13    /* ESPI2_SS0      */   
-                                MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12         	0x13    /* ESPI2_STBY_CAN */
-                                MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25               0x13    /* SPI_INT        */
-                    >;
-                };
+		/* to CAN controller */
+		pinctrl_ecspi2: ecspi2grp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_ECSPI2_MISO_ECSPI2_MISO 		0x13
+				MX8MQ_IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI 		0x13
+				MX8MQ_IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK 		0x13
+				/*MX8MQ_IOMUXC_ECSPI2_SS0_ECSPI2_SS0			0x13    /* Chip Select    */
+				MX8MQ_IOMUXC_ECSPI2_SS0_GPIO5_IO13			0x13    /* Chip Select    */
+				MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12			0x13    /* ESPI2_STBY_CAN (not needed, STDY signal may be put to gnd */
+				MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25			0x13    /* SPI_INT        */
+			>;
+		};
 
 		pinctrl_hdmi: hdmigrp {
 			fsl,pins = <
@@ -330,7 +331,7 @@
                         >;
                 };
 
-                /* Linux Console */
+		/* Linux Console */
 		pinctrl_uart1: uart1grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_UART1_RXD_UART1_DCE_RX		0x49
@@ -338,27 +339,27 @@
 			>;
 		};
 
-                /* Header */
+		/* Header */
 		pinctrl_uart2: uart2grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_UART2_RXD_UART2_DCE_RX		0x49
 				MX8MQ_IOMUXC_UART2_TXD_UART2_DCE_TX		0x49
-                                MX8MQ_IOMUXC_UART4_RXD_UART2_DCE_CTS_B          0x49  /* (?) */
-                                MX8MQ_IOMUXC_UART4_TXD_UART2_DCE_RTS_B          0x49  /* (?) */
+				MX8MQ_IOMUXC_UART4_RXD_UART2_DCE_CTS_B	0x49  /* (?) */
+				MX8MQ_IOMUXC_UART4_TXD_UART2_DCE_RTS_B	0x49  /* (?) */
 			>;
 		};
 
-                /* Header */
+		/* Header */
 		pinctrl_uart3: uart3grp {
 			fsl,pins = <
-				MX8MQ_IOMUXC_UART3_RXD_UART3_DCE_RX		0x49
-				MX8MQ_IOMUXC_UART3_TXD_UART3_DCE_TX		0x49
-                                MX8MQ_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B        0x49
-                                MX8MQ_IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B         0x49
+				MX8MQ_IOMUXC_UART3_RXD_UART3_DCE_RX			0x49
+				MX8MQ_IOMUXC_UART3_TXD_UART3_DCE_TX			0x49
+				MX8MQ_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B	0x49
+				MX8MQ_IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B		0x49
 			>;
 		};
 
-                /* eMMC */
+		/* eMMC */
 		pinctrl_usdhc1: usdhc1grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_SD1_CLK_USDHC1_CLK			0x83
@@ -410,7 +411,7 @@
 			>;
 		};
 
-                /* Wifi SDIO on eNOBU - shared between WiFi/uSD  */
+		/* Wifi SDIO on eNOBU - shared between WiFi/uSD  */
 		pinctrl_usdhc2: usdhc2grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_SD2_CLK_USDHC2_CLK			0x83
@@ -468,7 +469,7 @@
                         >;
                 };
 
-                /* WM8904 audio serial (on SOM) */
+		/* WM8904 audio serial (on SOM) */
 		pinctrl_sai3: sai3grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_SAI3_RXFS_SAI3_RX_SYNC		0xd6
@@ -492,7 +493,7 @@
 			>;
 		};
 
-                /* present but disabled by default */
+		/* present but disabled by default */
 		pinctrl_lvds: lvdsgrp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x16
@@ -501,7 +502,7 @@
                 
 		pinctrl_usbotg: usbotggrp {
 			fsl,pins = <
-                                MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12              0xc1   /* usb_otg_pwr_en */
+				MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12		0xc1   /* usb_otg_pwr_en */
 			>;
 		};
 
@@ -618,13 +619,12 @@
                                         reg = <1>;
                                         label = "lan6";
                                 };
-  
+
                                 switch0downlink: port@5 {
                                         reg = <5>;
                                         label = "dsa";
                                         link = <&switch1uplink>;
                                         phy-mode = "1000base-x";
-
 				        fixed-link {
 					        speed = <1000>;
 					        full-duplex;
@@ -632,7 +632,6 @@
 						};
 	                };
                 };
-
 
                 switch1: switch1@0 {
         		compatible = "marvell,mv88e6085";
@@ -645,7 +644,7 @@
 			interrupt-parent = <&gpio1>;
 			interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
 
-			/* Disabilitato per scheda di laboratorio che ha il secondo switch rotto *
+			/* Disabilitato per scheda di laboratorio che ha il secondo switch rotto
 			status = "disabled"; */
  
         		ports {
@@ -1001,23 +1000,22 @@
 &ecspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
-	cs-gpios = <&gpio5 13 GPIO_ACTIVE_HIGH>;
+	cs-gpios = <&gpio5 13 GPIO_ACTIVE_LOW>;
 	fsl,spi-num-chipselects = <1>;
 	status = "okay";
 
-        /* MPC25625  External CAN controller */
+	/* MPC25625 external CAN controller */
 	can0: can@0 {
 		compatible = "microchip,mcp25625";
 		reg = <0>;
 		clocks = <&can_osc>;
 		interrupt-parent = <&gpio3>;
 		interrupts = <25 0x2>;
-                spi-max-frequency = <5000000>;
+		spi-max-frequency = <5000000>;
 		vdd-supply = <&reg_can>;
 		xceiver-supply = <&reg_can>;
-	        status = "okay";
+		status = "okay";
 	};
-
 };
 
 /* M.2 Module 1 */

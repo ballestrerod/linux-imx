@@ -550,6 +550,9 @@ static int mcp251x_set_normal_mode(struct spi_device *spi)
 			  CANINTE_ERRIE | CANINTE_TX2IE | CANINTE_TX1IE |
 			  CANINTE_TX0IE | CANINTE_RX1IE | CANINTE_RX0IE);
 
+	/* Test loopback mode */
+	//priv->can.ctrlmode |= CAN_CTRLMODE_LOOPBACK;
+
 	if (priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK) {
 		/* Put device into loopback mode */
 		mcp251x_write_reg(spi, CANCTRL, CANCTRL_REQOP_LOOPBACK);
@@ -571,6 +574,9 @@ static int mcp251x_set_normal_mode(struct spi_device *spi)
 			}
 		}
 	}
+
+	dev_dbg(&spi->dev, "CANCTRL mode: 0x%02x\n", priv->can.ctrlmode);
+
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	return 0;
 }
@@ -606,6 +612,11 @@ static int mcp251x_setup(struct net_device *net, struct spi_device *spi)
 			  RXBCTRL_BUKT | RXBCTRL_RXM0 | RXBCTRL_RXM1);
 	mcp251x_write_reg(spi, RXBCTRL(1),
 			  RXBCTRL_RXM0 | RXBCTRL_RXM1);
+
+	dev_dbg(&spi->dev, "RXBnCTRL: 0x%02x 0x%02x\n",
+		mcp251x_read_reg(spi, RXBCTRL(0)),
+		mcp251x_read_reg(spi, RXBCTRL(1)));
+
 	return 0;
 }
 
@@ -1055,7 +1066,7 @@ static int mcp251x_can_probe(struct spi_device *spi)
 	priv->can.do_set_mode = mcp251x_do_set_mode;
 	priv->can.clock.freq = freq / 2;
 	priv->can.ctrlmode_supported = CAN_CTRLMODE_3_SAMPLES |
-		CAN_CTRLMODE_LOOPBACK | CAN_CTRLMODE_LISTENONLY;
+		CAN_CTRLMODE_LOOPBACK | CAN_CTRLMODE_LISTENONLY | CAN_CTRLMODE_ONE_SHOT;
 	if (of_id)
 		priv->model = (enum mcp251x_model)of_id->data;
 	else
