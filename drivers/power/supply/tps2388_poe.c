@@ -157,7 +157,7 @@ static ssize_t store_poe_enable(struct device *dev, struct device_attribute *da,
 	i2c_smbus_write_byte_data(client, TPS2388_IEEE_POWER_EN, 1 << val);
 	mutex_unlock(&tps->update_lock);
 
-			led_trigger_event(&tps->trig[val], LED_FULL);
+	led_trigger_event(&tps->trig[val], LED_FULL);
 
 	return count;
 }
@@ -594,7 +594,7 @@ static int tps2388_probe(struct i2c_client *client,
 {
 	struct tps2388 *tps;
 	struct device *dev = &client->dev;
-	int k, err, ieee_mode, disconnect = 0;
+	int k, err, val, disconnect = 0;
 
 	tps = devm_kzalloc(dev, sizeof(*tps), GFP_KERNEL);
 	if (tps == NULL)
@@ -636,14 +636,13 @@ static int tps2388_probe(struct i2c_client *client,
 
 	if (tps->ieee_mode)
 	{
-		ieee_mode = i2c_smbus_read_byte_data(client, TPS2388_POE_PLUS);
+		val = i2c_smbus_read_byte_data(client, TPS2388_POE_PLUS);
 
 		mutex_lock(&tps->update_lock);
-		i2c_smbus_write_byte_data(client, TPS2388_POE_PLUS, ieee_mode | TPS2388_POE_PLUS_TPON);
+		i2c_smbus_write_byte_data(client, TPS2388_POE_PLUS, val | TPS2388_POE_PLUS_TPON);
 		mutex_unlock(&tps->update_lock);
 
-		ieee_mode = i2c_smbus_read_byte_data(client, TPS2388_POE_PLUS);
-		dev_err(&client->dev, "IEEE mode enabled! (0x%02X)\n", ieee_mode);
+		dev_info(&client->dev, "IEEE mode enabled\n");
 	}
 
 
@@ -686,8 +685,6 @@ static int tps2388_probe(struct i2c_client *client,
 
 	/* Setup work task to poll for changes */
 	INIT_WORK(&tps->dis_connect, tps2388_poll_work);
-
-	//schedule_work(&tps->dis_connect);
 
 	/* Setup timer for detection (no GPIO, no IRQ!) */
 	setup_timer(&tps->poll_timer, tps2388_poll_function, (unsigned long)tps);
