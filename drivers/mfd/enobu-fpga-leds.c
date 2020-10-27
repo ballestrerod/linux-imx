@@ -14,49 +14,69 @@
 #include <linux/io.h>
 #include <linux/fpga/machxo-efb.h>
 
+/* FPGA registers to handle front LEDs */
+#define ENOBU_FPGA_LED_POE			0x0B
+#define ENOBU_FPGA_LED_SPARE		0x0C
 
 struct enobu_led {
 	struct led_classdev cdev;
 	const char *name;
+	u16 reg;
 	u8 mask;
 };
 
 static struct enobu_led leds[] = {
 	{
+		.name = "spare_2",
+		.reg  = ENOBU_FPGA_LED_SPARE,
+		.mask = BIT(1),
+	},
+	{
+		.name = "spare_1",
+		.reg  = ENOBU_FPGA_LED_SPARE,
+		.mask = BIT(0),
+	},
+	{
 		.name = "poe_8",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(7),
 	},
 	{
 		.name = "poe_7",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(6),
 	},
 	{
 		.name = "poe_6",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(5),
 	},
 	{
 		.name = "poe_1",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(4),
 	},
 	{
 		.name = "poe_5",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(3),
 	},
 	{
 		.name = "poe_3",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(2),
 	},
 	{
 		.name = "poe_2",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(1),
 	},
 	{
 		.name = "poe_4",
+		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(0),
 	}
 };
-
-#define ENOBU_FPGA_LED_POE          0x0b
 
 
 #define to_enobu_led(x) container_of(x, struct enobu_led, cdev)
@@ -68,14 +88,14 @@ static void enobu_led_brightness_set(struct led_classdev *led_cdev,
 	struct enobu_led *led = to_enobu_led(led_cdev);
 	u8 val;
 
-	efb_spi_read(ENOBU_FPGA_LED_POE, &val);
+	efb_spi_read(led->reg, &val);
 
 	if (value == LED_OFF)
 		val &= ~led->mask;
 	else
 		val |= led->mask;
 
-	efb_spi_write(ENOBU_FPGA_LED_POE, val);
+	efb_spi_write(led->reg, val);
 }
 
 static enum led_brightness enobu_led_brightness_get(struct led_classdev *led_cdev)
