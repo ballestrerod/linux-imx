@@ -38,7 +38,7 @@
 
 		reg_audio: audio_vdd {
 			compatible = "regulator-fixed";
-			regulator-name = "audio_supply";
+			regulator-name = "wm8904_supply";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			regulator-always-on;
@@ -66,7 +66,7 @@
 			regulator-max-microvolt = <5000000>;
 			regulator-always-on;
 		};
-
+/*
 		reg_usb_otg1_vbus: vbus_otg {
 			compatible = "regulator-fixed";
 			regulator-name = "usb_otg1_vbus";
@@ -75,7 +75,7 @@
 			gpio = <&gpio1 12 GPIO_ACTIVE_HIGH>;
 		        enable-active-high;
 			regulator-always-on;
-                };
+                }; */
 	};
 
         /* CFPX-180 quartz crystal */
@@ -184,30 +184,8 @@
         fpga-region0 {
         	compatible = "fpga-region";
         	fpga-mgr = <&fpga_mgr>;
-                        
-                enobu_fpga: enobu-fpga@0 {
-		        pinctrl-names = "default";
-		        pinctrl-0 = <&pinctrl_fpga>;
-             	        compatible = "leonardo,enobu-fpga";
-                        
-			interrupt-parent = <&gpio1>;
-  		        interrupts = <11 IRQ_TYPE_EDGE_FALLING>; 
-  		        
-                        ledmatrix: ledmatrix@0 {
-             	                compatible = "leonardo,enobu-fpga-ledmatrix";
-                        };
-                        
-                        leds: leds@0 {
-             	                compatible = "leonardo,enobu-fpga-leds";
-                        };
-                        
-                        gpioreg: gpioreg@0 {
-             	                compatible = "leonardo,enobu-fpga-gpioreg";
-                                gpio-controller;
-                                #gpio-cells = <3>;
-                        };
-                };
         };
+
 };
 
 
@@ -314,9 +292,9 @@
 
                 pinctrl_fpga: fpgagrp {
                         fsl,pins = <
-                                MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1               0xc1  /* FPGA_PROGRAMN       */
+                                MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1               0xc7  /* FPGA_PROGRAMN       */
+                                MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19             0xc7  /* FPGA_INITN (???)    */
                                 MX8MQ_IOMUXC_GPIO1_IO15_GPIO1_IO15              0xc1  /* FPGA_DONE           */
-                                MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19             0xc1  /* FPGA_INITN (???)    */
                                 MX8MQ_IOMUXC_GPIO1_IO11_GPIO1_IO11              0xc1  /* FPGA_IRQ (oppure)   */
                         >;
                 };
@@ -965,8 +943,8 @@
 		compatible = "microchip,usb5744";
 		reg = <0x7f>;
 
-		reset-gpio = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
-		vbus-gpio = <&gpioreg 0x2 7 GPIO_ACTIVE_LOW>;
+		// reset-gpio = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
+		// vbus-gpio = <&gpioreg 0x2 7 GPIO_ACTIVE_LOW>;
 	};
 };
 
@@ -979,7 +957,7 @@
 
 /* FPGA */
 &i2c4 {
-	clock-frequency = <10000>;
+	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c4>;
 	status = "okay";
@@ -987,7 +965,33 @@
         pcie_sw: pi7c9x2g404@6f {
 		compatible = "pericom,pi7c9x2g404";
 		reg = <0x6f>;
-                reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
+                // reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
+        };
+
+        enobu_fpga: enobu-fpga@32 {
+   	        pinctrl-names = "default";
+   	        pinctrl-0 = <&pinctrl_fpga>;
+                compatible = "leonardo,enobu-fpga";
+   	        reg = <0x32>;
+
+   	        interrupt-parent = <&gpio1>;
+   	        interrupts = <11 IRQ_TYPE_EDGE_FALLING>; 
+   	     
+                /*
+                ledmatrix: ledmatrix@0 {
+                             compatible = "leonardo,enobu-fpga-ledmatrix";
+                };
+                
+                leds: leds@0 {
+                             compatible = "leonardo,enobu-fpga-leds";
+                };
+                
+                gpioreg: gpioreg@0 {
+                             compatible = "leonardo,enobu-fpga-gpioreg";
+                        gpio-controller;
+                        #gpio-cells = <3>;
+                };
+                */
         };
 
         /* TODO popolare con
@@ -1083,7 +1087,7 @@
 	status = "okay";
 };
 
-/* Wifi */
+/* Wifi 
 &usdhc2 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_wifi>;
@@ -1092,7 +1096,7 @@
 	bus-width = <4>;
 	vmmc-supply = <&reg_wifi_en>;
 	status = "okay";
-};
+}; */
 
 
 /* USBOTG */
@@ -1107,12 +1111,12 @@
 &usb_dwc3_0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
-	vbus-supply = <&reg_usb_otg1_vbus>;
+	/* vbus-supply = <&reg_usb_otg1_vbus>; */
 	disable-over-current;
         srp-disable;
         hnp-disable;
         adp-disable;
-        dr_mode = "host";
+        dr_mode = "peripheral";
 	status = "okay";
 };
 

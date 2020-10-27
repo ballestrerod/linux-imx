@@ -8,7 +8,7 @@
  * Copyright (C) 2018 Paolo Pisati <p.pisati@gmail.com>
  */
 
-#define DEBUG
+#define DEBUG 1
 
 #include <linux/delay.h>
 #include <linux/fpga/fpga-mgr.h>
@@ -127,7 +127,7 @@ EXPORT_SYMBOL_GPL(efb_spi_write);
 /* MachXO2 Programming Guide - sysCONFIG Programming Commands */
 #define IDCODE_PUB		{0xe0, 0x00, 0x00, 0x00}
 #define ISC_ENABLE		{0xc6, 0x08, 0x00, 0x00}
-#define ISC_ERASE		{0x0e, 0x04, 0x00, 0x00}
+#define ISC_ERASE		{0x0e, 0x0c, 0x00, 0x00}
 #define ISC_PROGRAMDONE		{0x5e, 0x00, 0x00, 0x00}
 #define LSC_INITADDRESS		{0x46, 0x00, 0x00, 0x00}
 #define LSC_PROGINCRNV		{0x70, 0x00, 0x00, 0x01}
@@ -197,7 +197,6 @@ static int get_status(struct spi_device *spi, unsigned long *status)
 	return 0;
 }
 
-#ifdef DEBUG
 static const char *get_err_string(u8 err)
 {
 	switch (err) {
@@ -213,16 +212,13 @@ static const char *get_err_string(u8 err)
 
 	return "Default switch case";
 }
-#endif
 
 static void dump_status_reg(unsigned long *status)
 {
-#ifdef DEBUG
-	pr_debug("machxo2 status: 0x%08lX - done=%d, cfgena=%d, busy=%d, fail=%d, devver=%d, err=%s\n",
+	pr_err("machxo2 status: 0x%08lX - done=%d, cfgena=%d, busy=%d, fail=%d, devver=%d, err=%s\n",
 		 *status, test_bit(DONE, status), test_bit(ENAB, status),
 		 test_bit(BUSY, status), test_bit(FAIL, status),
 		 test_bit(DVER, status), get_err_string(get_err(status)));
-#endif
 }
 
 static int wait_until_not_busy(struct spi_device *spi)
@@ -250,6 +246,8 @@ static int machxo2_cleanup(struct fpga_manager *mgr)
 	static const u8 refresh[] = LSC_REFRESH;
 	int ret;
 
+	dev_dbg(&mgr->dev, "Cleanup ERASE START\n");
+
 	memset(tx, 0, sizeof(tx));
 	spi_message_init(&msg);
 	tx[0].tx_buf = &erase;
@@ -263,6 +261,8 @@ static int machxo2_cleanup(struct fpga_manager *mgr)
 	if (ret)
 		goto fail;
 
+	dev_dbg(&mgr->dev, "Cleanup ERASE END\n");
+
 	spi_message_init(&msg);
 	tx[1].tx_buf = &refresh;
 	tx[1].len = sizeof(refresh);
@@ -271,6 +271,8 @@ static int machxo2_cleanup(struct fpga_manager *mgr)
 	ret = spi_sync(spi, &msg);
 	if (ret)
 		goto fail;
+
+	dev_dbg(&mgr->dev, "Cleanup REFRESH END\n");
 
 	return 0;
 fail:
@@ -311,6 +313,8 @@ static int machxo2_write_init(struct fpga_manager *mgr,
 		return -ENOTSUPP;
 	}
 
+        dev_info(&mgr->dev, "Transmit Enable Configuration Interface (0xC6)\n");
+
 	get_status(spi, &status);
 	dump_status_reg(&status);
 	memset(tx, 0, sizeof(tx));
@@ -319,6 +323,8 @@ static int machxo2_write_init(struct fpga_manager *mgr,
 	tx[0].len = sizeof(enable);
 	tx[0].delay_usecs = MACHXO2_LOW_DELAY_USEC;
 	spi_message_add_tail(&tx[0], &msg);
+
+        dev_info(&mgr->dev, "Erase NVCM/Flash (0x0E)\n");
 
 	tx[1].tx_buf = &erase;
 	tx[1].len = sizeof(erase);
@@ -330,11 +336,13 @@ static int machxo2_write_init(struct fpga_manager *mgr,
 	ret = wait_until_not_busy(spi);
 	if (ret)
 		goto fail;
-
+	
 	get_status(spi, &status);
 	if (test_bit(FAIL, &status))
 		goto fail;
 	dump_status_reg(&status);
+
+        dev_info(&mgr->dev, "Transmit Reset NVCM0/CFG Address (0x46)\n");
 
 	spi_message_init(&msg);
 	tx[2].tx_buf = &initaddr;
@@ -371,8 +379,16 @@ static int machxo2_write(struct fpga_manager *mgr, const char *buf,
 	}
 	get_status(spi, &status);
 	dump_status_reg(&status);
+
+        dev_info(&mgr->dev, "ProgincrNV (0x70)\n");
+
+        printk(KERN_DEBUG "start: ");
+
 	memcpy(payload, &progincr, sizeof(progincr));
 	for (i = 0; i < count; i += MACHXO2_PAGE_SIZE) {
+
+                printk(KERN_CONT ".");
+
 		memcpy(&payload[sizeof(progincr)], &buf[i], MACHXO2_PAGE_SIZE);
 		memset(&tx, 0, sizeof(tx));
 		spi_message_init(&msg);
@@ -389,6 +405,8 @@ static int machxo2_write(struct fpga_manager *mgr, const char *buf,
 	get_status(spi, &status);
 	dump_status_reg(&status);
 
+        printk(KERN_CONT "\n");
+
 	return 0;
 }
 
@@ -403,26 +421,36 @@ static int machxo2_write_complete(struct fpga_manager *mgr,
 	unsigned long status;
 	int ret, refreshloop = 0;
 
+        dev_info(&mgr->dev, "Transmit Program DONE Command (0x5e)\n");
+
 	memset(tx, 0, sizeof(tx));
 	spi_message_init(&msg);
 	tx[0].tx_buf = &progdone;
 	tx[0].len = sizeof(progdone);
 	spi_message_add_tail(&tx[0], &msg);
 	ret = spi_sync(spi, &msg);
-	if (ret)
+	if (ret) {
+	        dev_err(&mgr->dev, "send PROGDONE\n");
 		goto fail;
-	ret = wait_until_not_busy(spi);
-	if (ret)
+        }
+	
+        ret = wait_until_not_busy(spi);
+	if (ret) {
+	        dev_err(&mgr->dev, "wait BUSY\n");
 		goto fail;
-
+        }
 	get_status(spi, &status);
 	dump_status_reg(&status);
 	if (!test_bit(DONE, &status)) {
+	        dev_err(&mgr->dev, "signal DONE\n");
 		machxo2_cleanup(mgr);
 		goto fail;
 	}
 
 	do {
+
+                dev_info(&mgr->dev, "Transmit Refresh Command (0x79)\n");
+
 		spi_message_init(&msg);
 		tx[1].tx_buf = &refresh;
 		tx[1].len = sizeof(refresh);
@@ -439,6 +467,7 @@ static int machxo2_write_complete(struct fpga_manager *mgr,
 		    get_err(&status) == ENOERR)
 			break;
 		if (++refreshloop == MACHXO2_MAX_REFRESH_LOOP) {
+	                dev_err(&mgr->dev, "max refresh loop\n");
 			machxo2_cleanup(mgr);
 			goto fail;
 		}
