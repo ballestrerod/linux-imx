@@ -291,13 +291,13 @@ static int tps2388_configure_single_port(struct i2c_client *client, struct tps23
 };
 
 #ifdef CONFIG_OF
-static int tps2388_of_property_parse_op_mode(struct device_node *client, char *name,
+static int tps2388_of_property_parse_op_mode(struct device_node *client,
 				unsigned int *result)
 {
 		const char *mode;
 		int err;
 
-		err = of_property_read_string(client, name, &mode);
+		err = of_property_read_string(client, "op_mode", &mode);
 		if (err < 0)
 				return err;
 
@@ -312,6 +312,27 @@ static int tps2388_of_property_parse_op_mode(struct device_node *client, char *n
 
 		return 0;
 }
+
+#if IS_ENABLED(CONFIG_LEDS_TRIGGERS)
+/* POE LEDs triggers */
+static void poe_led_trigger_activate(struct led_classdev *led_cdev)
+{
+	dev_warn(led_cdev->dev, "Activated POE led\n");
+
+	/* Su sola attivazione, senza device collegato, si potrebbe far lampeggiare il led poe */
+#if 0
+	struct kbd_led_trigger *trigger =
+			container_of(cdev->trigger, struct kbd_led_trigger, trigger);
+
+	tasklet_disable(&keyboard_tasklet);
+	if (ledstate != -1U)
+			led_trigger_event(&trigger->trigger,
+						ledstate & trigger->mask ?
+						LED_FULL : LED_OFF);
+	tasklet_enable(&keyboard_tasklet);
+#endif
+}
+#endif
 
 static int tps2388_get_port_config_of(struct i2c_client *client)
 {
@@ -336,38 +357,52 @@ static int tps2388_get_port_config_of(struct i2c_client *client)
 	for_each_child_of_node(client->dev.of_node, node) {
 		unsigned int port;
 		unsigned int op_mode      = TPS2388_DEFAULT_OP_MODE;
+		unsigned int led_pos      = TPS2388_DEFAULT_LED_POS;
 		unsigned int det_class_en = TPS2388_DEFAULT_DETECT_CLASS;
 
 		if (of_property_read_u32(node, "id", &pval)) {
 				dev_err(&client->dev, "Invalid id on %pOF\n", node);
 				continue;
 		}
-
 		port = pval;
+
 		if (port < 0 || port >= TPS2388_PORT_MAX) {
-				dev_err(&client->dev,
-								"Invalid port index %d on %pOF\n", port, node);
-				continue;
+			dev_err(&client->dev, "Invalid port index %d on %pOF\n", port, node);
+			continue;
 		}
 
-		if (tps2388_of_property_parse_op_mode(node, "op_mode", &pval) < 0)
+		if (tps2388_of_property_parse_op_mode(node, &pval) < 0)
 		{
 			dev_err(&client->dev, "Invalid op mode on %pOF\n", node);
 			continue;
 		}
 		op_mode = pval;
 
+		/* POE ports does not match with physical position. Remap LEDs in DTS */
+		if (of_property_read_u32(node, "led_pos", &pval)) {
+			dev_warn(&client->dev, "Invalid LED position on %pOF\n", node);
+		}
+		if (pval > 0 || pval < 9)	/* Only admitted values */
+			led_pos = pval;
+
 		if (!of_property_read_u32(node, "det_class_en", &pval)) {
-				det_class_en = pval;
-				if (det_class_en < 0) {
-						dev_err(&client->dev, "Invalid detect/class on %pOF\n", node);
-						continue;
-				}
+			det_class_en = pval;
+			if (det_class_en < 0) {
+				dev_err(&client->dev, "Invalid detect/class on %pOF\n", node);
+				continue;
+			}
 		}
 
 		data->port_data[port].enabled = true;
 		data->port_data[port].op_mode = op_mode;
 		data->port_data[port].det_class_en = (det_class_en > 0);
+
+#if IS_ENABLED(CONFIG_LEDS_TRIGGERS)
+		data->trig[port].name = kasprintf(GFP_KERNEL, "poe_%d", led_pos);
+		data->trig[port].activate = poe_led_trigger_activate;
+
+		devm_led_trigger_register(&client->dev, &data->trig[port]);
+#endif
 
 		ports++;
 	}
@@ -376,45 +411,6 @@ static int tps2388_get_port_config_of(struct i2c_client *client)
 
 	return 0;
 }
-#endif
-
-#if IS_ENABLED(CONFIG_LEDS_TRIGGERS)
-/* POE LEDs triggers */
-static void poe_led_trigger_activate(struct led_classdev *led_cdev)
-{
-	dev_warn(led_cdev->dev, "Activated POE led\n");
-
-	/* Su sola attivazione, senza device collegato, si potrebbe far lampeggiare il led poe */
-#if 0
-	struct kbd_led_trigger *trigger =
-			container_of(cdev->trigger, struct kbd_led_trigger, trigger);
-
-	tasklet_disable(&keyboard_tasklet);
-	if (ledstate != -1U)
-			led_trigger_event(&trigger->trigger,
-						ledstate & trigger->mask ?
-						LED_FULL : LED_OFF);
-	tasklet_enable(&keyboard_tasklet);
-#endif
-}
-
-static int tps2388_led_init(struct i2c_client *client)
-{
-	struct tps2388 *tps = i2c_get_clientdata(client);
-	struct device *dev = &client->dev;
-	int p;
-
-	for (p = 0; p < TPS2388_PORT_MAX; p++)
-	{
-		/* In Configuration A device has 2 sets of 4 ports. We need unique led names, so add 4 for the second set */
-		tps->trig[p].name = kasprintf(GFP_KERNEL, "poe_%d", (p + 1) + (4 * tps->dev_index));
-		tps->trig[p].activate = poe_led_trigger_activate;
-
-		devm_led_trigger_register(dev, &tps->trig[p]);
-	}
-
-	return 0;
-};
 #endif
 
 #if IS_ENABLED(CONFIG_LEDS_TRIGGERS)
@@ -629,10 +625,6 @@ static int tps2388_probe(struct i2c_client *client,
 
 	/* Read DTS configuration */
 	tps2388_get_port_config_of(client);
-
-#if IS_ENABLED(CONFIG_LEDS_TRIGGERS)
-	tps2388_led_init(client);
-#endif
 
 	if (tps->ieee_mode)
 	{

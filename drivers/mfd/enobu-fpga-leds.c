@@ -52,12 +52,12 @@ static struct enobu_led leds[] = {
 		.mask = BIT(5),
 	},
 	{
-		.name = "poe_1",
+		.name = "poe_5",
 		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(4),
 	},
 	{
-		.name = "poe_5",
+		.name = "poe_4",
 		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(3),
 	},
@@ -72,7 +72,7 @@ static struct enobu_led leds[] = {
 		.mask = BIT(1),
 	},
 	{
-		.name = "poe_4",
+		.name = "poe_1",
 		.reg  = ENOBU_FPGA_LED_POE,
 		.mask = BIT(0),
 	}
