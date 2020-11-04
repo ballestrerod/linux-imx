@@ -22,17 +22,15 @@
 #define ENOBU_FPGA_MAX_LEDS     10
 
 
-
 struct enobu_led {
-        int                     id;
+	int                     id;
 	//? const char              *name;
-        struct enobu_leds       *parent;
+	struct enobu_leds       *parent;
 	struct led_classdev     cdev;
-        enum led_brightness     current_brightness;
+	enum led_brightness     current_brightness;
 	u16                     reg;
 	u8                      mask;
 };
-
 
 struct enobu_leds {
         struct device           *dev;
@@ -56,11 +54,11 @@ static struct enobu_led_reg led_reg[] = {
 	{ .name = "poe_8",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(7), },
 	{ .name = "poe_7",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(6), },
 	{ .name = "poe_6",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(5), },
-	{ .name = "poe_1",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(4), },
-	{ .name = "poe_5",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(3), },
+	{ .name = "poe_5",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(4), },
+	{ .name = "poe_4",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(3), },
 	{ .name = "poe_3",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(2), },
 	{ .name = "poe_2",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(1), },
-	{ .name = "poe_4",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(0), }
+	{ .name = "poe_1",      .reg = ENOBU_FPGA_REG_POELED,     .mask = BIT(0), }
 };
 
 #define to_enobu_led(x) container_of(x, struct enobu_led, cdev)

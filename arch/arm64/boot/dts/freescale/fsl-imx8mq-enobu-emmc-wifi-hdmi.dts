@@ -847,21 +847,25 @@
 			port@0 {
 				id = <0>;
 				op_mode = "auto";
+				led_pos = <5>;
 				det_class_en = <1>;
 			};
 			port@1 {
 				id = <1>;
 				op_mode = "auto";
+				led_pos = <2>;
 				det_class_en = <1>;
 			};
 			port@2 {
 				id = <2>;
 				op_mode = "auto";
+				led_pos = <3>;
 				det_class_en = <1>;
 			};
 			port@3 {
 				id = <3>;
 				op_mode = "auto";
+				led_pos = <1>;
 				det_class_en = <1>;
 			};
 		};
@@ -875,21 +879,25 @@
 			port@0 {
 				id = <0>;
 				op_mode = "auto";
+				led_pos = <4>;
 				det_class_en = <1>;
 			};
 			port@1 {
 				id = <1>;
 				op_mode = "auto";
+				led_pos = <6>;
 				det_class_en = <1>;
 			};
 			port@2 {
 				id = <2>;
 				op_mode = "auto";
+				led_pos = <7>;
 				det_class_en = <1>;
 			};
 			port@3 {
 				id = <3>;
 				op_mode = "auto";
+				led_pos = <8>;
 				det_class_en = <1>;
 			};
 		};
