@@ -165,26 +165,27 @@
 		num-chipselects = <1>;
 		status = "okay";
 		
-               /* FPGA Lattice MachXO3LF */
+               /* FPGA Lattice MachXO3LF 
                fpga_mgr: fpga-mgr@0 {
 			compatible = "lattice,machxo2-slave-spi";
 			reg = <0>;
 			spi-max-frequency = <100000>;
                         status = "okay";
-		};
+		}; */
                 
-                /* debug SPI toward FPGA
+                /* debug SPI toward FPGA */
                 spi@0 {
 			compatible = "spidev";
 			reg = <0>;
 			spi-max-frequency = <100000>;
-		}; */
+		};
         };
 
+        /*
         fpga-region0 {
         	compatible = "fpga-region";
         	fpga-mgr = <&fpga_mgr>;
-        };
+        }; */
 
 };
 
@@ -942,8 +943,8 @@
 		compatible = "microchip,usb5744";
 		reg = <0x7f>;
 
-		// reset-gpio = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
-		// vbus-gpio = <&gpioreg 0x2 7 GPIO_ACTIVE_LOW>;
+		reset-gpio = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
+		vbus-gpio = <&gpioreg 0x2 7 GPIO_ACTIVE_LOW>;
 	};
 };
 
@@ -964,7 +965,7 @@
         pcie_sw: pi7c9x2g404@6f {
 		compatible = "pericom,pi7c9x2g404";
 		reg = <0x6f>;
-                // reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
+                reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
         };
 
         enobu_fpga: enobu-fpga@32 {
@@ -976,21 +977,19 @@
    	        interrupt-parent = <&gpio1>;
    	        interrupts = <11 IRQ_TYPE_EDGE_FALLING>; 
    	     
-                /*
                 ledmatrix: ledmatrix@0 {
-                             compatible = "leonardo,enobu-fpga-ledmatrix";
+                        compatible = "leonardo,enobu-fpga-ledmatrix";
                 };
                 
                 leds: leds@0 {
-                             compatible = "leonardo,enobu-fpga-leds";
+                        compatible = "leonardo,enobu-fpga-leds";
                 };
                 
                 gpioreg: gpioreg@0 {
-                             compatible = "leonardo,enobu-fpga-gpioreg";
+                        compatible = "leonardo,enobu-fpga-gpioreg";
                         gpio-controller;
                         #gpio-cells = <3>;
                 };
-                */
         };
 
         /* TODO popolare con

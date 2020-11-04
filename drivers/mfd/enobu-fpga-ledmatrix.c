@@ -19,10 +19,11 @@
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
-
-#include <linux/fpga/machxo-efb.h>
-
 #include <linux/uaccess.h>
+
+// #include <linux/fpga/machxo-efb.h>
+#include <linux/mfd/enobu-fpga.h>
+
 
 
 #define ________        0x00
@@ -843,15 +844,9 @@ const unsigned int matrix_bitmap_descriptor[] =
  */
 
 
-#define ENOBU_MATRIXDISP_BASE_REG               0x20
-#define ENOBU_MATRIXDISP_MODE_REG               0x34
-
-#define MATRIXDISP_MODE_FIXED	                0x00
-#define MATRIXDISP_MODE_SCROLL	                0x01
-
 #define MATRIX_ROW_HEIGHT   5
 
-
+#if 0
 static void matrixdisp_write_mode(u8 mode)
 {
   efb_spi_write(ENOBU_MATRIXDISP_MODE_REG, mode);
@@ -862,13 +857,47 @@ static void matrixdisp_write_row(u8 val, int rown)
 {
   efb_spi_write(ENOBU_MATRIXDISP_BASE_REG + rown, val);
 }
+#endif
+
+
+static void matrixdisp_write_mode(struct enobu_fpga *enobufpga, u8 mode)
+{
+        int ret;
+
+	ret = enobu_fpga_reg_write(enobufpga, ENOBU_FPGA_REG_MTRXDISPMODE, mode);
+	if (ret < 0) {
+		dev_err(enobufpga->dev, "%s: Error in writing reg 0x%x\n",
+			__func__, ENOBU_FPGA_REG_MTRXDISPMODE);
+	}
+
+        return;
+}
+
+
+static void matrixdisp_write_row(struct enobu_fpga *enobufpga, u8 val, int rown)
+{
+        int ret;
+
+	ret = enobu_fpga_reg_write(enobufpga, ENOBU_FPGA_REG_MTRXDISP + rown, val);
+	if (ret < 0) {
+		dev_err(enobufpga->dev, "%s: Error in writing reg 0x%x\n",
+			__func__, ENOBU_FPGA_REG_MTRXDISP);
+	}
+
+        return;
+}
+
+
+
+
+
 
 
 /*************************************/
 /* Visualizzazione a caratteri FIXED */
 /*************************************/
 
-static void matrixdisp_chr_fill(u_int8_t *dotrow)
+static void matrixdisp_chr_fill(struct enobu_fpga *enobufpga, u_int8_t *dotrow)
 {
     u_int8_t fpga_reg;
     int i;
@@ -876,13 +905,13 @@ static void matrixdisp_chr_fill(u_int8_t *dotrow)
     for (i = 0; i < MATRIX_ROW_HEIGHT; i++, dotrow++) {
         fpga_reg = *dotrow;
 
-        matrixdisp_write_row(fpga_reg, i);
+        matrixdisp_write_row(enobufpga, fpga_reg, i);
     }
 
     return;
 }
 
-static int matrixdisp_chr_display(const char *dispchr)
+static int matrixdisp_chr_display(struct enobu_fpga *enobufpga, const char *dispchr)
 {
     char *chr_pxl_bitmap, *chr_str;
     int i, j, chr_offset;
@@ -921,7 +950,7 @@ static int matrixdisp_chr_display(const char *dispchr)
     }
     
     /* scrivo byte a byte la stringa nella FPGA */
-    matrixdisp_chr_fill(dot_row);
+    matrixdisp_chr_fill(enobufpga, dot_row);
 
     return 0;
 }
@@ -929,10 +958,10 @@ static int matrixdisp_chr_display(const char *dispchr)
 
 /* Public functions */
 
-int matrixdisp_char(const char *dchr)
+int matrixdisp_char(struct enobu_fpga *enobufpga, const char *dchr)
 {
-    matrixdisp_write_mode(MATRIXDISP_MODE_FIXED);
-    matrixdisp_chr_display(dchr);
+    matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_FIXED);
+    matrixdisp_chr_display(enobufpga, dchr);
 
     printk(KERN_ERR "[MATRIX-CHAR] %s\n", dchr);
 
@@ -945,7 +974,7 @@ int matrixdisp_char(const char *dchr)
 /* Visualizzazione a stringa SCROLLING */
 /***************************************/
 
-void matrixdisp_str_fill(u_int32_t *dotrow)
+void matrixdisp_str_fill(struct enobu_fpga *enobufpga, u_int32_t *dotrow)
 {
     u_int8_t fpga_reg, fpga_regb, fpga_regc, fpga_regd;
     int i;
@@ -956,10 +985,10 @@ void matrixdisp_str_fill(u_int32_t *dotrow)
         fpga_regc = (char)((*dotrow & 0x0000ff00) >> 8);
         fpga_regd = (char)(*dotrow & 0x000000ff);
         
-        matrixdisp_write_row(fpga_reg, i);
-        matrixdisp_write_row(fpga_regb, i + 5);
-        matrixdisp_write_row(fpga_regc, i + 10);
-        matrixdisp_write_row(fpga_regd, i + 15);
+        matrixdisp_write_row(enobufpga, fpga_reg, i);
+        matrixdisp_write_row(enobufpga, fpga_regb, i + 5);
+        matrixdisp_write_row(enobufpga, fpga_regc, i + 10);
+        matrixdisp_write_row(enobufpga, fpga_regd, i + 15);
     }
 
     return;
@@ -967,7 +996,7 @@ void matrixdisp_str_fill(u_int32_t *dotrow)
 
 
 
-int matrixdisp_str_display(const char *dispstr)
+int matrixdisp_str_display(struct enobu_fpga *enobufpga, const char *dispstr)
 {
     char *chr_pxl_bitmap, *chr_str;
     int i, j, chr_offset;
@@ -1006,16 +1035,16 @@ int matrixdisp_str_display(const char *dispstr)
     }
     
     /* scrivo byte a byte la stringa nella FPGA */
-    matrixdisp_str_fill(dot_row);
+    matrixdisp_str_fill(enobufpga, dot_row);
     
     return 0;
 }
 
 
-int matrixdisp_prnt(const char *dstr)
+int matrixdisp_prnt(struct enobu_fpga *enobufpga, const char *dstr)
 {
-    matrixdisp_write_mode(MATRIXDISP_MODE_SCROLL);
-    matrixdisp_str_display(dstr);
+    matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_SCROLL);
+    matrixdisp_str_display(enobufpga, dstr);
 
     printk(KERN_ERR "[MATRIX-PRINT] %s\n", dstr);
 
@@ -1034,6 +1063,7 @@ static atomic_t ledmatrix_available = ATOMIC_INIT(1);
 
 struct enobu_ledmatrix {
         u8	                *ledmatrix_buffer;
+        struct enobu_fpga       *enobufpga;
 	struct miscdevice       miscdev;
         u8                      mode;
 };
@@ -1062,10 +1092,10 @@ static ssize_t store_ledmatrix_mode(struct device *dev,
 	struct enobu_ledmatrix *ldmtrx = dev_get_drvdata(dev);
 
 	if (sysfs_streq(buf, "fixed")) {
-                matrixdisp_write_mode(MATRIXDISP_MODE_FIXED);
+                matrixdisp_write_mode(ldmtrx->enobufpga, MATRIXDISP_MODE_FIXED);
                 ldmtrx->mode = MATRIXDISP_MODE_FIXED;
         } else if (sysfs_streq(buf, "scroll")) {
-                matrixdisp_write_mode(MATRIXDISP_MODE_SCROLL);
+                matrixdisp_write_mode(ldmtrx->enobufpga, MATRIXDISP_MODE_SCROLL);
                 ldmtrx->mode = MATRIXDISP_MODE_SCROLL;
         } else {
 		return -EINVAL;
@@ -1126,9 +1156,9 @@ static ssize_t enobu_ledmatrix_write(struct file *file, const char __user *buf,
 		return -EFAULT;
 
         if (ldmtrx->mode == MATRIXDISP_MODE_FIXED)
-                matrixdisp_char(ldmtrx->ledmatrix_buffer);
+                matrixdisp_char(ldmtrx->enobufpga, ldmtrx->ledmatrix_buffer);
         else
-                matrixdisp_prnt(ldmtrx->ledmatrix_buffer);
+                matrixdisp_prnt(ldmtrx->enobufpga, ldmtrx->ledmatrix_buffer);
 
 	// mutex_unlock(&spidev->buf_lock);
 
@@ -1200,6 +1230,7 @@ static const struct file_operations enobu_ledmatrix_fops = {
 
 static int enobu_ledmatrix_probe(struct platform_device *pdev)
 {
+        struct enobu_fpga *enobufpga = dev_get_drvdata(pdev->dev.parent);
         struct enobu_ledmatrix *ldmtrx;
 	struct device *dev = &pdev->dev;
 	int ret = 0;
@@ -1208,6 +1239,8 @@ static int enobu_ledmatrix_probe(struct platform_device *pdev)
 	if (!ldmtrx)
 		return -ENOMEM;
 
+	platform_set_drvdata(pdev, ldmtrx);
+        ldmtrx->enobufpga = enobufpga;
         ldmtrx->mode = MATRIXDISP_MODE_SCROLL;
         ldmtrx->ledmatrix_buffer = NULL;
 
@@ -1232,8 +1265,6 @@ static int enobu_ledmatrix_probe(struct platform_device *pdev)
 		dev_err(dev, "misc_register() failed\n");
 		goto out;
 	}
-
-	platform_set_drvdata(pdev, ldmtrx);
 
         pr_debug("0. ledmatrix: MODE %x\n", ldmtrx->mode);
 

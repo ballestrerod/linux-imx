@@ -7,17 +7,20 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
-#include <linux/fpga/machxo-efb.h>
+
+#include <linux/mfd/enobu-fpga.h>
+//#include <linux/fpga/machxo-efb.h>
 
 
 struct enobu_gpioreg {
-	struct gpio_chip gc;
-	spinlock_t lock;
-	u8 direction;
-	u8 out;
-	u16 fpga_reg;
-	struct irq_domain *irqdomain;
-	const int *irqs;
+        struct enobu_fpga       *enobufpga;
+	struct irq_domain       *irqdomain;
+	const int               *irqs;
+	struct gpio_chip        gc;
+	spinlock_t              lock;
+	u16                     fpga_reg;
+	u8                      direction;
+	u8                      out;
 };
 
 #define to_enobu_gpioreg(x) container_of(x, struct enobu_gpioreg, gc)
@@ -28,6 +31,7 @@ static int enobu_gpioreg_get_direction(struct gpio_chip *gc, unsigned offset)
 
 	return r->direction & BIT(offset) ? 1 : 0;
 }
+
 
 static int enobu_gpioreg_direction_output(struct gpio_chip *gc, unsigned offset,
 	int value)
@@ -41,6 +45,7 @@ static int enobu_gpioreg_direction_output(struct gpio_chip *gc, unsigned offset,
 	return 0;
 }
 
+
 static int enobu_gpioreg_direction_input(struct gpio_chip *gc, unsigned offset)
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
@@ -48,23 +53,35 @@ static int enobu_gpioreg_direction_input(struct gpio_chip *gc, unsigned offset)
 	return r->direction & BIT(offset) ? 0 : -ENOTSUPP;
 }
 
+
 static void enobu_gpioreg_set(struct gpio_chip *gc, unsigned offset, int value)
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
 	unsigned long flags;
 	u8 val, mask = BIT(offset);
+        int ret;
 
-	spin_lock_irqsave(&r->lock, flags);
-	val = r->out;
+	// spin_lock_irqsave(&r->lock, flags);
+	
+        val = r->out;
 	if (value)
 		val |= mask;
 	else
 		val &= ~mask;
-	r->out = val;
-	// CHG writel_relaxed(val, r->reg);
-        efb_spi_write(r->fpga_reg, val);
-	spin_unlock_irqrestore(&r->lock, flags);
+	
+        //CHG writel_relaxed(val, r->reg);
+        //efb_spi_write(r->fpga_reg, val);
+        ret = enobu_fpga_reg_write(r->enobufpga, r->fpga_reg, val);
+ 	if (ret < 0)
+		goto out;
+
+        r->out = val;
+
+out:
+        //spin_unlock_irqrestore(&r->lock, flags);
+        return;
 }
+
 
 static int enobu_gpioreg_get(struct gpio_chip *gc, unsigned offset)
 {
@@ -78,17 +95,22 @@ static int enobu_gpioreg_get(struct gpio_chip *gc, unsigned offset)
 		 */
 		// read readl_relaxed(r->reg);
 		// val = readl_relaxed(r->reg);
-                efb_spi_read(r->fpga_reg, &val);
+
+                //efb_spi_read(r->fpga_reg, &val);
+                enobu_fpga_reg_read(r->enobufpga, r->fpga_reg, (unsigned int *)&val);
+
 	} else {
 		val = r->out;
 	}
 	return !!(val & mask);
 }
 
+
 static int enobu_gpioreg_request(struct gpio_chip *gc, unsigned offset)
 {
         return 0;
 }
+
 
 static void enobu_gpioreg_free(struct gpio_chip *gc, unsigned offset)
 {
@@ -101,13 +123,23 @@ static void enobu_gpioreg_set_multiple(struct gpio_chip *gc, unsigned long *mask
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
 	unsigned long flags;
+        int ret;
 
-	spin_lock_irqsave(&r->lock, flags);
+	// spin_lock_irqsave(&r->lock, flags);
+
 	r->out = (r->out & ~*mask) | (*bits & *mask);
-	// CHG writel_relaxed(r->out, r->reg);
-        efb_spi_write(r->fpga_reg, r->out);
-	spin_unlock_irqrestore(&r->lock, flags);
+
+	//CHG writel_relaxed(r->out, r->reg);
+        //efb_spi_write(r->fpga_reg, r->out);
+        ret = enobu_fpga_reg_write(r->enobufpga, r->fpga_reg, r->out);
+ 	if (ret < 0)
+		return;
+	
+//out:
+        // spin_unlock_irqrestore(&r->lock, flags);
+//        return;
 }
+
 
 static int enobu_gpioreg_to_irq(struct gpio_chip *gc, unsigned offset)
 {
@@ -119,6 +151,7 @@ static int enobu_gpioreg_to_irq(struct gpio_chip *gc, unsigned offset)
 
 	return irq;
 }
+
 
 static int fpga_gpioreg_of_xlate(struct gpio_chip *gc,
 			    const struct of_phandle_args *gpiospec, u32 *flags)
@@ -163,6 +196,7 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
 	int base, int num, const char *label, u8 direction, u8 def_out,
 	const char *const *names, struct irq_domain *irqdom, const int *irqs)
 {
+        struct enobu_fpga *enobufpga = dev_get_drvdata(dev->parent);
 	struct enobu_gpioreg *r;
 	int ret;
 
@@ -174,7 +208,7 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
 	if (!r)
 		return ERR_PTR(-ENOMEM);
 
-	spin_lock_init(&r->lock);
+	//spin_lock_init(&r->lock);
 
 	r->gc.label = label;
 	r->gc.get_direction = enobu_gpioreg_get_direction;
@@ -196,6 +230,7 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
         r->gc.of_node = dev->of_node;
         r->gc.of_xlate = fpga_gpioreg_of_xlate;
 
+        r->enobufpga = enobufpga;
 	r->direction = direction;
 	r->out = def_out;
 	r->fpga_reg = fpga_reg;
@@ -209,20 +244,18 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
 	return ret ? ERR_PTR(ret) : &r->gc;
 }
 
+
 int gpio_reg_resume(struct gpio_chip *gc)
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
 	unsigned long flags;
 
-	spin_lock_irqsave(&r->lock, flags);
+	//spin_lock_irqsave(&r->lock, flags);
 	// writel_relaxed(r->out, r->reg);
-	spin_unlock_irqrestore(&r->lock, flags);
+	//spin_unlock_irqrestore(&r->lock, flags);
 
 	return 0;
 }
-
-
-
 
 
 
@@ -377,6 +410,7 @@ static int enobu_gpioreg_probe(struct platform_device *pdev)
         return ret;
 }
 
+
 static int enobu_gpioreg_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -386,11 +420,13 @@ static int enobu_gpioreg_remove(struct platform_device *pdev)
         return ret;
 }
 
+
 static const struct of_device_id enobu_gpioreg_of_match[] = {
         { .compatible = "leonardo,enobu-fpga-gpioreg" },
         { }
 };
 MODULE_DEVICE_TABLE(of, enobu_gpioreg_of_match);
+
 
 static struct platform_driver enobu_gpioreg_driver = {
         .probe = enobu_gpioreg_probe,
