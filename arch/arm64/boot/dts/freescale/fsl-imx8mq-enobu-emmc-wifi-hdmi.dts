@@ -941,7 +941,7 @@
         /* USB5744T  usb hub */
         usb3_hub: usb5744@2d {
 		compatible = "microchip,usb5744";
-		reg = <0x7f>;
+		reg = <0x2d>;
 
 		reset-gpio = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
 		vbus-gpio = <&gpioreg 0x2 7 GPIO_ACTIVE_LOW>;
