@@ -949,7 +949,7 @@
         /* USB5744T  usb hub */
         usb3_hub: usb5744@2d {
 		compatible = "microchip,usb5744";
-		reg = <0x7f>;
+		reg = <0x2d>;
 
 		reset-gpio = <&gpioreg 0x2 6 GPIO_ACTIVE_LOW>;
 		vbus-gpio = <&gpioreg 0x2 7 GPIO_ACTIVE_LOW>;
@@ -1092,7 +1092,8 @@
 	status = "okay";
 };
 
-/* Wifi 
+
+/* Wifi */
 &usdhc2 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_wifi>;
@@ -1101,7 +1102,7 @@
 	bus-width = <4>;
 	vmmc-supply = <&reg_wifi_en>;
 	status = "okay";
-}; */
+};
 
 
 /* USBOTG */

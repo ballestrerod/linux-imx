@@ -139,7 +139,6 @@ static int enobu_led_probe(struct platform_device *pdev)
 	mutex_init(&leds->lock);
 
 	for (i = 0; i < ENOBU_FPGA_MAX_LEDS; i++) {
-
                 led = devm_kzalloc(dev, sizeof(*led), GFP_KERNEL);
 		if (!led) {
 			ret = -ENOMEM;
@@ -157,7 +156,6 @@ static int enobu_led_probe(struct platform_device *pdev)
 		leds->led[i]->cdev.brightness_get = 
                                         enobu_led_brightness_get;
 		//? leds->led[i]->cdev.default_trigger = led_reg[i].name;
-
                 leds->led[i]->parent = leds;
 
 		ret = devm_led_classdev_register(dev, &leds->led[i]->cdev);
@@ -194,3 +192,4 @@ module_platform_driver(enobu_led_driver);
 MODULE_AUTHOR("Davide Ballestrero, Leonardo");
 MODULE_DESCRIPTION("eNOBU FPGA LED driver");
 MODULE_LICENSE("GPL");
+
