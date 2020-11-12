@@ -15,7 +15,6 @@
 
 #include <linux/mfd/enobu-fpga.h>
 //#include <linux/fpga/machxo-efb.h>
-//
 
 
 /* FPGA registers to handle front LEDs */
@@ -155,17 +154,18 @@ static int enobu_led_probe(struct platform_device *pdev)
                                         enobu_led_brightness_set;
 		leds->led[i]->cdev.brightness_get = 
                                         enobu_led_brightness_get;
-		//? leds->led[i]->cdev.default_trigger = led_reg[i].name;
-                leds->led[i]->parent = leds;
+		leds->led[i]->cdev.default_trigger = led_reg[i].name;
+
+		leds->led[i]->parent = leds;
 
 		ret = devm_led_classdev_register(dev, &leds->led[i]->cdev);
 		if (ret < 0)
 			return ret;
 	}
 
-	dev_info(dev, "eNOBU LEDS initialized\n");
+	dev_info(dev, "eNOBU LEDs initialized\n");
 
-        return 0;
+	return 0;
 
 out_err:
 	return ret;
@@ -192,4 +192,3 @@ module_platform_driver(enobu_led_driver);
 MODULE_AUTHOR("Davide Ballestrero, Leonardo");
 MODULE_DESCRIPTION("eNOBU FPGA LED driver");
 MODULE_LICENSE("GPL");
-
