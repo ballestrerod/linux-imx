@@ -403,7 +403,6 @@ static int tps2388_get_port_config_of(struct i2c_client *client)
 
 		devm_led_trigger_register(&client->dev, &data->trig[port]);
 #endif
-
 		ports++;
 	}
 
@@ -448,24 +447,30 @@ static void tps2388_poll_work(struct work_struct *work)
 	struct tps2388 *tps = container_of(work, struct tps2388, dis_connect);
 
 	int poll_class, fault_detect, power_change;
-	static int last_class;
 
 	poll_class = i2c_smbus_read_byte_data(tps->client, TPS2388_DETECT_EV_CLEAR);
 
 	if (poll_class > 0)
 	{
-		dev_dbg(tps->dev, "Detect/class event 0x%02X\t", poll_class);
+		dev_dbg(tps->dev, "Detect/class event 0x%02X\n", poll_class);
+
+		/* Reset check used below */
+		if ((poll_class & 0xF0) < (tps->last_read & 0xF0))
+		{
+			tps->last_read = 0;
+		}
 
 		/* Classification is set in high nibble */
 		/* Second condition is needed because in the interval passed between the read (and clear)
 		 * of first classification and the power to the port, other classifications occur
 		 * on that port causing a second power up */
-		if ((poll_class & 0xF0) && (last_class != poll_class))
+		if ((poll_class & 0xF0) && (tps->last_read != poll_class))
 		{
-			last_class = poll_class;
 			mutex_lock(&tps->update_lock);
+			tps->last_read = poll_class;
 			i2c_smbus_write_byte_data(tps->client, TPS2388_IEEE_POWER_EN, poll_class >> 4);
 			mutex_unlock(&tps->update_lock);
+
 			dev_info(tps->dev, "PoE: at least one classification occurred, power on the port(s)\n");
 
 			/* Let the device(s) power up */
@@ -505,11 +510,7 @@ static void tps2388_poll_work(struct work_struct *work)
 			dev_err(tps->dev, "Fault/disconnect event 0x%02X\n", fault_detect);
 		} else
 		{
-			/* Guess it's a connection */
-			mutex_lock(&tps->update_lock);
-			i2c_smbus_write_byte_data(tps->client, TPS2388_IEEE_POWER_EN, power_change >> 4);
-			mutex_unlock(&tps->update_lock);
-
+			/* This is a connection */
 #if IS_ENABLED(CONFIG_LEDS_TRIGGERS)
 			tps3288_turn_on_led(tps, power_change >> 4);
 #endif
@@ -575,7 +576,7 @@ static int tps2388_detect(struct i2c_client *client)
 	if (!(general_mask & TPS2388_GMASK_NBITACC))
 			dev_index = ((i2c_smbus_read_byte_data(client, TPS2388_PIN_STATUS) & TPS2388_PSTATUS_SLA0) > 0);
 
-	dev_err(&adapter->dev, "dev_index %d, BIT(2) 0x%02lX, pin_status 0x%02X, general_mask 0x%02X\n", dev_index, BIT(2), i2c_smbus_read_byte_data(client, TPS2388_PIN_STATUS), general_mask);
+	dev_err(&adapter->dev, "dev_index %d, general_mask 0x%02X\n", dev_index, general_mask);
 
 	/* Disable INTEN, actually not used (Jul20) */
 	mutex_lock(&data->update_lock);
@@ -645,7 +646,7 @@ static int tps2388_probe(struct i2c_client *client,
 
 		dev_err(dev, "device_create_file %d (%d %d %d)\n", k, tps->port_data[k].enabled, tps->port_data[k].op_mode, tps->port_data[k].det_class_en);
 		err = device_create_file(&client->dev, &tps2388_status[k].dev_attr);
-		if (err) 
+		if (err)
 			goto exit_remove;
 
 		tps2388_configure_single_port(client, tps, k);
@@ -658,21 +659,21 @@ static int tps2388_probe(struct i2c_client *client,
 	mutex_lock(&tps->update_lock);
 	i2c_smbus_write_byte_data(client, TPS2388_DISCONNECT_EN, disconnect);
 	mutex_unlock(&tps->update_lock);
-	
+
 	err = device_create_file(&client->dev, &tps2388_temperature->dev_attr);
-	if (err) 
+	if (err)
 		goto exit_remove;
 
 	err = device_create_file(&client->dev, &tps2388_poe_enable->dev_attr);
-	if (err) 
+	if (err)
 		goto exit_remove;
 
 	err = device_create_file(&client->dev, &tps2388_poe_disable->dev_attr);
-	if (err) 
+	if (err)
 		goto exit_remove;
 
 	err = device_create_file(&client->dev, &tps2388_detect_class->dev_attr);
-	if (err) 
+	if (err)
 		goto exit_remove;
 
 	/* Setup work task to poll for changes */

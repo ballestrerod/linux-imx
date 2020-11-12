@@ -271,6 +271,8 @@ struct tps2388 {
 	int ieee_mode;	/* IEEE mode on */
 	int dev_index;	/* In Configuration A, device acts as two logical devices with 4 ports each */
 
+	int last_read;	/* Needed to remember last read on detect/class event register */
+
 	/* IRQ Data */
 	//int irq;
 	//struct regmap_irq_chip_data *irq_data;
