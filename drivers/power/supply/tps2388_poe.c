@@ -37,6 +37,9 @@ static const struct of_device_id tps2388_i2c_of_match_table[] = {
 MODULE_DEVICE_TABLE(of, tps2388_i2c_of_match_table);
 #endif
 
+static const char* POE_Class[]  = { "Unk", "1", "2", "3", "4", "Unk", "0", "OvrCur" };
+static const char* POE_Status[] = { "Unknown", "ShortCircuit", "Reserved", "Too low", "Valid", "Too high", "NoDev", "Reserved" };
+
 #if 0 // TODO
 static const struct regmap_range tps2388_yes_ranges[] = {
 	regmap_reg_range(TPS2388_INT_STS, TPS2388_GPIO5),
@@ -88,6 +91,17 @@ int tps2388_device_exit(struct tps2388 *tps)
 }
 #endif // 0
 
+
+static const char* get_class_status(int port_status)
+{
+	/* Handle special value */
+	if (port_status == 0xE)
+			return "Mosfet fault";
+
+	return POE_Status[port_status & 0x7];
+}
+
+
 /* sysfs callback function */
 static ssize_t show_status(struct device *dev, struct device_attribute *da,
 				    char *buf)
@@ -98,16 +112,23 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
 	int index = attr->index;
 
 	port_status     = i2c_smbus_read_byte_data(client, TPS2388_PORT_1_STATUS + index);
+
+	if (port_status == 0x6)	/* Open circuit, nothing else to do */
+	{
+		return sprintf(buf, "No device\n");
+	}
+
 	port_current    = i2c_smbus_read_word_data(client, TPS2388_PORT_1_CURRENT + 4 * index);
 	port_voltage    = i2c_smbus_read_word_data(client, TPS2388_PORT_1_VOLTAGE + 4 * index);
 	port_resistance = i2c_smbus_read_byte_data(client, TPS2388_PORT_1_DET_RES + index);
 
-	return sprintf(buf, "CL %d, DET %d %4dmA, %4dV, %dkOhm\n",
-					(port_status & 0xF0)>>4, (port_status & 0x0F),
+	return sprintf(buf, "%3dmA, %3dV, %dkOhm [%s, Class %s]\n",
 					((port_current & 0x3FFF) * 61035) / 1000000,
 					((port_voltage & 0x3FFF) *  3662) / 1000000,
-					(port_resistance * 1953125) / 10000000);
+					(port_resistance * 1953125) / 10000000,
+					get_class_status(port_status), POE_Class[(port_status & 0x70)>>4]);
 }
+
 
 /* In celsius degree. Formula is: (value read * 0.652) - 20 */
 static ssize_t show_temperature(struct device *dev, struct device_attribute *da,
@@ -124,11 +145,13 @@ static ssize_t show_temperature(struct device *dev, struct device_attribute *da,
 	return sprintf(buf, "%d.%d (step 0.652)\n", (temperature * 652)/1000 - 20, decimal);
 }
 
+
 static ssize_t show_poe_enable(struct device *dev, struct device_attribute *da,
 				    char *buf)
 {
 	return sprintf(buf, "Write port index to enable [1..4]\n");
 }
+
 
 static ssize_t store_poe_enable(struct device *dev, struct device_attribute *da,
 				               const char *buf, size_t count)
