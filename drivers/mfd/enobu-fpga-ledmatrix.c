@@ -889,10 +889,6 @@ static void matrixdisp_write_row(struct enobu_fpga *enobufpga, u8 val, int rown)
 
 
 
-
-
-
-
 /*************************************/
 /* Visualizzazione a caratteri FIXED */
 /*************************************/
@@ -980,7 +976,7 @@ void matrixdisp_str_fill(struct enobu_fpga *enobufpga, u_int32_t *dotrow)
     int i;
 
     for (i = 0; i < MATRIX_ROW_HEIGHT; i++, dotrow++) {
-        fpga_reg = (char)((*dotrow & 0xff000000) >> 24);
+        fpga_reg  = (char)((*dotrow & 0xff000000) >> 24);
         fpga_regb = (char)((*dotrow & 0x00ff0000) >> 16);
         fpga_regc = (char)((*dotrow & 0x0000ff00) >> 8);
         fpga_regd = (char)(*dotrow & 0x000000ff);
@@ -1046,7 +1042,7 @@ int matrixdisp_prnt(struct enobu_fpga *enobufpga, const char *dstr)
     matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_SCROLL);
     matrixdisp_str_display(enobufpga, dstr);
 
-    printk(KERN_ERR "[MATRIX-PRINT] %s\n", dstr);
+    printk(KERN_INFO "[MATRIX-PRINT] %s\n", dstr);
 
     return 0;
 }
@@ -1105,10 +1101,6 @@ static ssize_t store_ledmatrix_mode(struct device *dev,
 }
 
 static DEVICE_ATTR(ledmatrix_mode, 0644, show_ledmatrix_mode, store_ledmatrix_mode);
-
-
-
-
 
 
 
@@ -1218,13 +1210,12 @@ static int enobu_ledmatrix_release(struct inode *inode, struct file *file)
 
 static const struct file_operations enobu_ledmatrix_fops = {
 	.owner          = THIS_MODULE,
-        .write          = enobu_ledmatrix_write,
+	.write          = enobu_ledmatrix_write,
 	.open           = enobu_ledmatrix_open,
 	.release        = enobu_ledmatrix_release,
 	.unlocked_ioctl = enobu_ledmatrix_ioctl,
 	.llseek         = no_llseek,
 };
-
 
 
 
