@@ -96,10 +96,12 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb \
 			  imx8qp-lpddr4-val.dtb imx8dm-lpddr4-val.dtb imx8qm-pcieax2pciebx1.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-var-dart-wifi-dp.dtb \
 			  imx8mq-var-dart-wifi-hdmi.dtb \
+			  imx8mq-enobu-wifi-hdmi.dtb \
 			  imx8mq-var-dart-wifi-lvds.dtb \
 			  imx8mq-var-dart-wifi-lvds-dp.dtb \
 			  imx8mq-var-dart-wifi-lvds-hdmi.dtb \
 			  imx8mq-var-dart-wifi-hdmi-cb12.dtb \
+			  imx8mq-enobu-wifi-hdmi-cb12.dtb \
 			  imx8mq-var-dart-wifi-lvds-cb12.dtb \
 			  imx8mq-var-dart-wifi-lvds-hdmi-cb12.dtb \
 			  imx8mq-var-dart-sd-dp.dtb \
