@@ -2334,6 +2334,8 @@ static int wm8904_i2c_probe(struct i2c_client *i2c,
 	if (ret != 0)
 		return ret;
 
+	dev_info(&i2c->dev, "probed\n");
+
 	return 0;
 
 err_enable:

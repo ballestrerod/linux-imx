@@ -24,8 +24,10 @@
 #include "../codecs/wm8962.h"
 #include "../codecs/wm8960.h"
 #include "../codecs/wm8904.h"
+#include "../codecs/tas6424.h"
 
 #define CS427x_SYSCLK_MCLK 0
+#define TAS6424_SYSCLK_MCLK 0
 
 #define RX 0
 #define TX 1
@@ -616,6 +618,13 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 			priv->cpu_priv.sysclk_dir[TX] = SND_SOC_CLOCK_OUT;
 			priv->cpu_priv.sysclk_dir[RX] = SND_SOC_CLOCK_OUT;
 		}
+	} else if (of_device_is_compatible(np, "fsl,imx-audio-tas6424")) {
+		codec_dai_name = "tas6424-amplifier";
+		priv->card.set_bias_level = NULL;
+                priv->codec_priv.mclk_id = TAS6424_SYSCLK_MCLK;
+		priv->codec_priv.fll_id = TAS6424_SYSCLK_MCLK;
+		priv->codec_priv.pll_id = TAS6424_SYSCLK_MCLK;
+		priv->dai_fmt |= SND_SOC_DAIFMT_CBS_CFS;
 	} else if (of_device_is_compatible(np, "fsl,imx-audio-ac97")) {
 		codec_dai_name = "ac97-hifi";
 		priv->card.set_bias_level = NULL;
@@ -766,6 +775,7 @@ static const struct of_device_id fsl_asoc_card_dt_ids[] = {
 	{ .compatible = "fsl,imx-audio-wm8962", },
 	{ .compatible = "fsl,imx-audio-wm8960", },
 	{ .compatible = "fsl,imx-audio-wm8904", },
+	{ .compatible = "fsl,imx-audio-tas6424", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, fsl_asoc_card_dt_ids);

@@ -768,6 +768,8 @@ static int tas6424_i2c_probe(struct i2c_client *client,
 		return ret;
 	}
 
+	dev_info(dev, "probed\n");
+
 	return 0;
 }
 

@@ -191,7 +191,7 @@
                 
                 /* debug SPI toward FPGA */
                 spi@0 {
-			compatible = "spidev";
+			compatible = "var,spidev";
 			reg = <0>;
 			spi-max-frequency = <100000>;
 		};
@@ -288,10 +288,9 @@
 			MX8MQ_IOMUXC_ECSPI2_MISO_ECSPI2_MISO 		0x13
 			MX8MQ_IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI 		0x13
 			MX8MQ_IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK 		0x13
-			/*MX8MQ_IOMUXC_ECSPI2_SS0_ECSPI2_SS0			0x13    /* Chip Select    */
-			MX8MQ_IOMUXC_ECSPI2_SS0_GPIO5_IO13			0x13    /* Chip Select    */
-			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12			0x13    /* ESPI2_STBY_CAN (not needed, STDY signal may be put to gnd */
-			MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25			0x13    /* SPI_INT        */
+			MX8MQ_IOMUXC_ECSPI2_SS0_GPIO5_IO13		0x13    /* CS           */
+			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x13    /* ESPI2_STBY_CAN (not needed, STDY signal may be put to gnd */
+			MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25		0x13    /* SPI_INT        */
 		>;
 	};
 
@@ -491,12 +490,6 @@
 		>;
 	};
 
-	pinctrl_ethphy: ethphygrp {
-		fsl,pins = <
-			MX8MQ_IOMUXC_GPIO1_IO08_GPIO1_IO8		0xc1
-		>;
-	};
-
 	pinctrl_wifi: wifigrp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4		0xc1	/* WIFI_PWR_VSEL */
@@ -529,9 +522,6 @@
 
 /* Set WIFI SDIO voltage at 1.8V */
 &gpio1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hdmi>;
-
 	wifi_vsel_hog {
 		gpio-hog;
 		gpios = <4 0>;
@@ -557,7 +547,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
 	phy-mode = "rgmii";
-        phy-handle = <&switch0uplink>;
+//        phy-handle = <&switch0uplink>;
 	phy-reset-gpios = <&gpio3 24 GPIO_ACTIVE_LOW>;
 	phy-reset-duration = <30>;
         status = "okay";
@@ -567,24 +557,22 @@
                 full-duplex;
         };
 
-
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
-
                 // interrupt-controller;
-                #interrupt-cells = <2>;
+                // #interrupt-cells = <2>;
 
                 switch0: switch0@0 {
         		compatible = "marvell,mv88e6085";
-        		#address-cells = <1>;
-        		#size-cells = <0>;
+        		// #address-cells = <1>;
+        		// #size-cells = <0>;
 
         		reg = <0x18>;
         		dsa,member = <0 0>;
 
-			interrupt-parent = <&gpio1>;
-			interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+			// interrupt-parent = <&gpio1>;
+			// interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
  
         		ports {
         			#address-cells = <1>;
@@ -592,10 +580,10 @@
 			        
                                 switch0uplink: port@6 {
                                         reg = <6>;
-                                        label = "cpu";
-                                        ethernet = <&fec1>;
 	                                phy-mode = "rgmii";
+                                        // label = "cpu";
 
+                                        ethernet = <&fec1>;
                                         fixed-link {
                                                 speed = <1000>;
                                                 full-duplex;
@@ -629,27 +617,30 @@
 
                                 switch0downlink: port@5 {
                                         reg = <5>;
-                                        label = "dsa";
-                                        link = <&switch1uplink>;
                                         phy-mode = "1000base-x";
+
+                                        // label = "dsa";
+
+                                        link = <&switch1uplink>;
+
 				        fixed-link {
 					        speed = <1000>;
 					        full-duplex;
 				        };
-						};
+                                };
 	                };
                 };
 
                 switch1: switch1@0 {
         		compatible = "marvell,mv88e6085";
-        		#address-cells = <1>;
-        		#size-cells = <0>;
+        		// #address-cells = <1>;
+        		// #size-cells = <0>;
 
         		reg = <0x1e>;
         		dsa,member = <0 1>;
 
-			interrupt-parent = <&gpio1>;
-			interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
+			// interrupt-parent = <&gpio1>;
+			// interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
 
 			/* Disabilitato per scheda di laboratorio che ha il secondo switch rotto
 			status = "disabled"; */
@@ -685,18 +676,20 @@
   
                                 switch1uplink: port@5 {
                                         reg = <5>;
-                                        label = "dsa";
-                                        link = <&switch0downlink>;
                                         phy-mode = "1000base-x";
 
-                          fixed-link {
+                                        // label = "dsa";
+
+                                        link = <&switch0downlink>;
+
+                                        fixed-link {
 					        speed = <1000>;
 					        full-duplex;
-							};
-						};
+                                        };
+				};
 	                };
-			};
-		};
+                };
+        };
 };
 
 &i2c1 {
@@ -1067,7 +1060,7 @@
 		 <&clk IMX8MQ_CLK_PCIE2_PHY>,
 		 <&pcie1_refclk>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
-	status = "disabled";
+	status = "okay";
 };
 
 /* Console */
@@ -1184,7 +1177,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai2>;
         #sound-dai-cells = <0>;
-
 	assigned-clocks = <&clk IMX8MQ_CLK_SAI2>;
 	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <1536000>;
