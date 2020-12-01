@@ -73,13 +73,6 @@ cp arch/arm64/boot/Image.gz $OUTPUTDIR
 
 compile_dts imx8mq-enobu-wifi-hdmi $OUTPUTDIR
 
-# compile all dtbs
-# compile_dts nobu $OUTPUTDIR
-# compile_dts nobu-poe-exp $OUTPUTDIR
-# compile_dts nobu-dsa-switch $OUTPUTDIR
-# compile_dts nobu-dsa-switch-12ports $OUTPUTDIR
-# compile_dts nobu-dsa-gigaswitch $OUTPUTDIR
-
 createmodules
 
 # cptonobu

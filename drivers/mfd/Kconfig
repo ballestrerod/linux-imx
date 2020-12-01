@@ -1997,6 +1997,13 @@ config MFD_PCA9450
 	  if you say yes here you get support for the PCA9450
 	  Power Management chips.
 
+config MFD_ENOBU_FPGA
+	bool "eNOBU FPGA"
+	select MFD_CORE
+	select REGMAP
+	help
+	  Select this option to enable eNOBU FPGA 
+
 menu "Multimedia Capabilities Port drivers"
 	depends on ARCH_SA1100
 

@@ -553,6 +553,9 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 	else
 		codec_dev = NULL;
 
+        
+        dev_err(&pdev->dev, "codec_np %s   codec_dev %s\n", codec_np->name, codec_dev->name);
+
 	asrc_np = of_parse_phandle(np, "audio-asrc", 0);
 	if (asrc_np)
 		asrc_pdev = of_find_device_by_node(asrc_np);

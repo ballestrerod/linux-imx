@@ -718,4 +718,10 @@ config CHARGER_WILCO
 	  information can be found in
 	  Documentation/ABI/testing/sysfs-class-power-wilco
 
+config CHARGER_TPS2388
+	depends on I2C
+	tristate "TPS2388 PoE driver"
+	help
+	 Say Y here to enable support for PoE with TPS2388
+
 endif # POWER_SUPPLY
