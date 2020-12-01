@@ -963,7 +963,7 @@ int matrixdisp_char(struct enobu_fpga *enobufpga, const char *dchr)
     matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_FIXED);
     matrixdisp_chr_display(enobufpga, dchr);
 
-    printk(KERN_ERR "[MATRIX-CHAR] %s\n", dchr);
+    pr_debug("[MATRIX-CHAR] %s\n", dchr);
 
     return 0;
 }
@@ -1046,7 +1046,7 @@ int matrixdisp_prnt(struct enobu_fpga *enobufpga, const char *dstr)
     matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_SCROLL);
     matrixdisp_str_display(enobufpga, dstr);
 
-    printk(KERN_ERR "[MATRIX-PRINT] %s\n", dstr);
+    pr_debug("[MATRIX-PRINT] %s\n", dstr);
 
     return 0;
 }

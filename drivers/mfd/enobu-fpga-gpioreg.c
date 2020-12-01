@@ -328,7 +328,7 @@ static const char *uart3_conf_names[] = {
 #define ENOBU_FPGA_UART3_CONF_DUPL      (1<<7)
 
 static const char *digital_out_names[] = {
-	"out1", "out2", "out3",
+	"out0", "out1", "out2",
 };
 
 #define ENOBU_FPGA_HANDSFREE            0x06
@@ -346,8 +346,8 @@ static const char *handsfree_names[] = {
 #define ENOBU_FPGA_DOUT3      (1<<2)
 
 static const char *digital_inp_names[] = {
-	"inp1", "inp2", "inp3", "inp4",
-        "inp5", "inp6", "inp7"
+	"inp0", "inp1", "inp2", "inp3",
+        "inp4", "inp5", "inp6"
 };
 
 #define ENOBU_FPGA_DINP       0x0a
