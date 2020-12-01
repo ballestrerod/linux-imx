@@ -37,6 +37,9 @@ static const struct of_device_id tps2388_i2c_of_match_table[] = {
 MODULE_DEVICE_TABLE(of, tps2388_i2c_of_match_table);
 #endif
 
+static const char* POE_Class[]  = { "Unk", "1", "2", "3", "4", "Unk", "0", "OvrCur" };
+static const char* POE_Status[] = { "Unknown", "ShortCircuit", "Reserved", "Too low", "Valid", "Too high", "NoDev", "Reserved" };
+
 #if 0 // TODO
 static const struct regmap_range tps2388_yes_ranges[] = {
 	regmap_reg_range(TPS2388_INT_STS, TPS2388_GPIO5),
@@ -88,6 +91,17 @@ int tps2388_device_exit(struct tps2388 *tps)
 }
 #endif // 0
 
+
+static const char* get_class_status(int port_status)
+{
+	/* Handle special value */
+	if (port_status == 0xE)
+			return "Mosfet fault";
+
+	return POE_Status[port_status & 0x7];
+}
+
+
 /* sysfs callback function */
 static ssize_t show_status(struct device *dev, struct device_attribute *da,
 				    char *buf)
@@ -98,16 +112,23 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
 	int index = attr->index;
 
 	port_status     = i2c_smbus_read_byte_data(client, TPS2388_PORT_1_STATUS + index);
+
+	if (port_status == 0x6)	/* Open circuit, nothing else to do */
+	{
+		return sprintf(buf, "No device\n");
+	}
+
 	port_current    = i2c_smbus_read_word_data(client, TPS2388_PORT_1_CURRENT + 4 * index);
 	port_voltage    = i2c_smbus_read_word_data(client, TPS2388_PORT_1_VOLTAGE + 4 * index);
 	port_resistance = i2c_smbus_read_byte_data(client, TPS2388_PORT_1_DET_RES + index);
 
-	return sprintf(buf, "CL %d, DET %d %4dmA, %4dV, %dkOhm\n",
-					(port_status & 0xF0)>>4, (port_status & 0x0F),
+	return sprintf(buf, "%3dmA, %3dV, %dkOhm [%s, Class %s]\n",
 					((port_current & 0x3FFF) * 61035) / 1000000,
 					((port_voltage & 0x3FFF) *  3662) / 1000000,
-					(port_resistance * 1953125) / 10000000);
+					(port_resistance * 1953125) / 10000000,
+					get_class_status(port_status), POE_Class[(port_status & 0x70)>>4]);
 }
+
 
 /* In celsius degree. Formula is: (value read * 0.652) - 20 */
 static ssize_t show_temperature(struct device *dev, struct device_attribute *da,
@@ -124,11 +145,13 @@ static ssize_t show_temperature(struct device *dev, struct device_attribute *da,
 	return sprintf(buf, "%d.%d (step 0.652)\n", (temperature * 652)/1000 - 20, decimal);
 }
 
+
 static ssize_t show_poe_enable(struct device *dev, struct device_attribute *da,
 				    char *buf)
 {
 	return sprintf(buf, "Write port index to enable [1..4]\n");
 }
+
 
 static ssize_t store_poe_enable(struct device *dev, struct device_attribute *da,
 				               const char *buf, size_t count)
@@ -317,7 +340,7 @@ static int tps2388_of_property_parse_op_mode(struct device_node *client,
 /* POE LEDs triggers */
 static void poe_led_trigger_activate(struct led_classdev *led_cdev)
 {
-	dev_warn(led_cdev->dev, "Activated POE led\n");
+	dev_info(led_cdev->dev, "Activated POE led\n");
 
 	/* Su sola attivazione, senza device collegato, si potrebbe far lampeggiare il led poe */
 #if 0
@@ -346,7 +369,7 @@ static int tps2388_get_port_config_of(struct i2c_client *client)
 		return -EINVAL;
 
 	if (of_property_read_u32(client->dev.of_node, "ieee_enable", &pval)) {
-			dev_err(&client->dev, "Invalid ieee_enable field\n");
+		dev_err(&client->dev, "Invalid ieee_enable field\n");
 	}
 
 	if (pval == 1)
@@ -361,8 +384,8 @@ static int tps2388_get_port_config_of(struct i2c_client *client)
 		unsigned int det_class_en = TPS2388_DEFAULT_DETECT_CLASS;
 
 		if (of_property_read_u32(node, "id", &pval)) {
-				dev_err(&client->dev, "Invalid id on %pOF\n", node);
-				continue;
+			dev_err(&client->dev, "Invalid id on %pOF\n", node);
+			continue;
 		}
 		port = pval;
 
@@ -406,7 +429,7 @@ static int tps2388_get_port_config_of(struct i2c_client *client)
 		ports++;
 	}
 
-	dev_err(&client->dev, "Found %d ports in DTS\n", ports);
+	dev_info(&client->dev, "Found %d ports in DTS\n", ports);
 
 	return 0;
 }
@@ -507,7 +530,7 @@ static void tps2388_poll_work(struct work_struct *work)
 #if IS_ENABLED(CONFIG_LEDS_TRIGGERS)
 			tps3288_turn_off_led(tps, fault_detect >> 4);
 #endif
-			dev_err(tps->dev, "Fault/disconnect event 0x%02X\n", fault_detect);
+			dev_warn(tps->dev, "Fault/disconnect event 0x%02X\n", fault_detect);
 		} else
 		{
 			/* This is a connection */
@@ -566,7 +589,7 @@ static int tps2388_detect(struct i2c_client *client)
 			return -ENODEV;
 	}
 
-	dev_warn(&adapter->dev, "Found TPS2388 @ 0x%02x - Mfg.Ver %02d.%02d Silicon %02d Firmware 0x%02x\n",
+	dev_info(&adapter->dev, "Found TPS2388 @ 0x%02x - Mfg.Ver %02d.%02d Silicon %02d Firmware 0x%02x\n",
 					address, chip_id >> 3, chip_id & 0x07, (dev_id & 0x1F), fw_ver);
 
 	/* Read Configuration type */
@@ -576,7 +599,7 @@ static int tps2388_detect(struct i2c_client *client)
 	if (!(general_mask & TPS2388_GMASK_NBITACC))
 			dev_index = ((i2c_smbus_read_byte_data(client, TPS2388_PIN_STATUS) & TPS2388_PSTATUS_SLA0) > 0);
 
-	dev_err(&adapter->dev, "dev_index %d, general_mask 0x%02X\n", dev_index, general_mask);
+	dev_dbg(&adapter->dev, "dev_index %d, general_mask 0x%02X\n", dev_index, general_mask);
 
 	/* Disable INTEN, actually not used (Jul20) */
 	mutex_lock(&data->update_lock);
@@ -596,7 +619,7 @@ static int tps2388_probe(struct i2c_client *client,
 	tps = devm_kzalloc(dev, sizeof(*tps), GFP_KERNEL);
 	if (tps == NULL)
 	{
-		dev_err(dev, "failed to allocate device struct\n");
+		dev_err(dev, "Failed to allocate device struct\n");
 		return -ENOMEM;
 	}
 
@@ -638,13 +661,12 @@ static int tps2388_probe(struct i2c_client *client,
 		dev_info(&client->dev, "IEEE mode enabled\n");
 	}
 
-
 	/* Build sysfs attribute group */
     for (k = 0; k < TPS2388_PORT_MAX; ++k) {
 //		if (!tps->port_data[k].enabled)
 //			continue;
 
-		dev_err(dev, "device_create_file %d (%d %d %d)\n", k, tps->port_data[k].enabled, tps->port_data[k].op_mode, tps->port_data[k].det_class_en);
+		dev_dbg(dev, "device_create_file %d (%d %d %d)\n", k, tps->port_data[k].enabled, tps->port_data[k].op_mode, tps->port_data[k].det_class_en);
 		err = device_create_file(&client->dev, &tps2388_status[k].dev_attr);
 		if (err)
 			goto exit_remove;
@@ -724,6 +746,6 @@ static struct i2c_driver tps2388_i2c_driver = {
 
 module_i2c_driver(tps2388_i2c_driver);
 
-MODULE_AUTHOR("Sergio Biasi <belinux@gmail.com>");
+MODULE_AUTHOR("Sergio Biasi <sergio.biasi@leonardocompany.com>");
 MODULE_DESCRIPTION("TPS2388 I2C Interface Driver");
 MODULE_LICENSE("GPL v2");
