@@ -1059,6 +1059,7 @@
 	pinctrl-0 = <&pinctrl_uart2>;
 	assigned-clocks = <&clk IMX8MQ_CLK_UART2>;
 	assigned-clock-parents = <&clk IMX8MQ_CLK_25M>;
+	uart-has-rtscts;
 	status = "okay";
 };
 
@@ -1068,6 +1069,7 @@
 	pinctrl-0 = <&pinctrl_uart3>;
 	assigned-clocks = <&clk IMX8MQ_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MQ_CLK_25M>;
+	uart-has-rtscts;
 	status = "okay";
 };
 
@@ -1101,6 +1103,8 @@
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_wifi>;
 	bus-width = <4>;
 	vmmc-supply = <&reg_wifi_en>;
+	wifi-host;
+	non-removable;
 	status = "okay";
 };
 
