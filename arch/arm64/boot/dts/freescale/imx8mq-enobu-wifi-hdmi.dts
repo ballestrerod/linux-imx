@@ -1014,7 +1014,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
 	cs-gpios = <&gpio5 13 GPIO_ACTIVE_LOW>;
-	fsl,spi-num-chipselects = <1>;
 	status = "okay";
 
 	/* MPC25625 external CAN controller */
@@ -1029,6 +1028,14 @@
 		xceiver-supply = <&reg_can>;
 		status = "okay";
 	};
+
+	/* Test SPI device 
+	spidev@0 {
+		reg = <0>;
+		compatible = "var,spidev";
+		spi-max-frequency = <12000000>;
+		status = "okay";
+	}; */
 };
 
 &pcie0 {
@@ -1083,7 +1090,7 @@
 	status = "okay";
 };
 
-/* Bluetooth */
+/* Bluetooth 
 &uart4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>, <&pinctrl_bt>;
@@ -1091,7 +1098,7 @@
 	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 	fsl,uart-has-rtscts;
 	status = "disabled";
-};
+}; */
 
 /* eMMC */
 &usdhc1 {
