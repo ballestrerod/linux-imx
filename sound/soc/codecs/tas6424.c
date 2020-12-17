@@ -7,6 +7,8 @@
  *	Andrew F. Davis <afd@ti.com>
  */
 
+#define DEBUG 1
+
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/device.h>
@@ -16,6 +18,7 @@
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -43,6 +46,8 @@ struct tas6424_data {
 	unsigned int last_fault1;
 	unsigned int last_fault2;
 	unsigned int last_warn;
+	struct gpio_desc *standby_gpio;
+	struct gpio_desc *mute_gpio;
 };
 
 /*
@@ -61,6 +66,8 @@ static const struct snd_kcontrol_new tas6424_snd_controls[] = {
 		       TAS6424_CH3_VOL_CTRL, 0, 0xff, 0, dac_tlv),
 	SOC_SINGLE_TLV("Speaker Driver CH4 Playback Volume",
 		       TAS6424_CH4_VOL_CTRL, 0, 0xff, 0, dac_tlv),
+	SOC_SINGLE_STROBE("Auto Diagnostics Switch", TAS6424_DC_DIAG_CTRL1,
+			  TAS6424_LDGBYPASS_SHIFT, 1),
 };
 
 static int tas6424_dac_event(struct snd_soc_dapm_widget *w,
@@ -249,9 +256,15 @@ static int tas6424_set_dai_tdm_slot(struct snd_soc_dai *dai,
 static int tas6424_mute(struct snd_soc_dai *dai, int mute)
 {
 	struct snd_soc_codec *codec = dai->codec;
+	struct tas6424_data *tas6424 = snd_soc_codec_get_drvdata(codec);
 	unsigned int val;
 
 	dev_dbg(codec->dev, "%s() mute=%d\n", __func__, mute);
+
+	if (tas6424->mute_gpio) {
+		gpiod_set_value_cansleep(tas6424->mute_gpio, mute);
+		return 0;
+	}
 
 	if (mute)
 		val = TAS6424_ALL_STATE_MUTE;
@@ -287,6 +300,12 @@ static int tas6424_power_on(struct snd_soc_codec *codec)
 {
 	struct tas6424_data *tas6424 = snd_soc_codec_get_drvdata(codec);
 	int ret;
+	u8 chan_states;
+	int no_auto_diags = 0;
+	unsigned int reg_val;
+
+	if (!regmap_read(tas6424->regmap, TAS6424_DC_DIAG_CTRL1, &reg_val))
+		no_auto_diags = reg_val & TAS6424_LDGBYPASS_MASK;
 
 	ret = regulator_bulk_enable(ARRAY_SIZE(tas6424->supplies),
 				    tas6424->supplies);
@@ -303,12 +322,25 @@ static int tas6424_power_on(struct snd_soc_codec *codec)
 		return ret;
 	}
 
-	snd_soc_write(codec, TAS6424_CH_STATE_CTRL, TAS6424_ALL_STATE_MUTE);
+	if (tas6424->mute_gpio) {
+		gpiod_set_value_cansleep(tas6424->mute_gpio, 0);
+		/*
+		 * channels are muted via the mute pin.  Don't also mute
+		 * them via the registers so that subsequent register
+		 * access is not necessary to un-mute the channels
+		 */
+		chan_states = TAS6424_ALL_STATE_PLAY;
+	} else {
+		chan_states = TAS6424_ALL_STATE_MUTE;
+	}
+	snd_soc_write(codec, TAS6424_CH_STATE_CTRL, chan_states);
 
 	/* any time we come out of HIZ, the output channels automatically run DC
-	 * load diagnostics, wait here until this completes
+	 * load diagnostics if autodiagnotics are enabled. wait here until this
+	 * completes.
 	 */
-	msleep(230);
+	if (!no_auto_diags)
+		msleep(230);
 
 	return 0;
 }
@@ -334,6 +366,15 @@ static int tas6424_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
+
+
+static int tas6424_set_dai_sysclk(struct snd_soc_dai *dai,
+				int clk_id, unsigned int freq, int dir)
+{
+        return 0;
+};
+
+
 static struct snd_soc_codec_driver soc_codec_dev_tas6424 = {
 	.set_bias_level = tas6424_set_bias_level,
 	.idle_bias_off = true,
@@ -353,6 +394,7 @@ static struct snd_soc_dai_ops tas6424_speaker_dai_ops = {
 	.set_fmt	= tas6424_set_dai_fmt,
 	.set_tdm_slot	= tas6424_set_dai_tdm_slot,
 	.digital_mute	= tas6424_mute,
+        .set_sysclk     = tas6424_set_dai_sysclk,
 };
 
 static struct snd_soc_dai_driver tas6424_dai[] = {
@@ -395,8 +437,10 @@ static void tas6424_fault_check_work(struct work_struct *work)
 	       TAS6424_FAULT_PVDD_UV |
 	       TAS6424_FAULT_VBAT_UV;
 
-	if (reg)
+	if (!reg) {
+		tas6424->last_fault1 = reg;
 		goto check_global_fault2_reg;
+	}
 
 	/*
 	 * Only flag errors once for a given occurrence. This is needed as
@@ -432,8 +476,10 @@ check_global_fault2_reg:
 	       TAS6424_FAULT_OTSD_CH3 |
 	       TAS6424_FAULT_OTSD_CH4;
 
-	if (!reg)
+	if (!reg) {
+		tas6424->last_fault2 = reg;
 		goto check_warn_reg;
+	}
 
 	if ((reg & TAS6424_FAULT_OTSD) && !(tas6424->last_fault2 & TAS6424_FAULT_OTSD))
 		dev_crit(dev, "experienced a global overtemp shutdown\n");
@@ -468,8 +514,10 @@ check_warn_reg:
 	       TAS6424_WARN_VDD_OTW_CH3 |
 	       TAS6424_WARN_VDD_OTW_CH4;
 
-	if (!reg)
+	if (!reg) {
+		tas6424->last_warn = reg;
 		goto out;
+	}
 
 	if ((reg & TAS6424_WARN_VDD_UV) && !(tas6424->last_warn & TAS6424_WARN_VDD_UV))
 		dev_warn(dev, "experienced a VDD under voltage condition\n");
@@ -628,6 +676,38 @@ static int tas6424_i2c_probe(struct i2c_client *client,
 		return ret;
 	}
 
+	/*
+	 * Get control of the standby pin and set it LOW to take the codec
+	 * out of the stand-by mode.
+	 * Note: The actual pin polarity is taken care of in the GPIO lib
+	 * according the polarity specified in the DTS.
+	 */
+	tas6424->standby_gpio = devm_gpiod_get_optional(dev, "standby",
+						      GPIOD_OUT_LOW);
+	if (IS_ERR(tas6424->standby_gpio)) {
+		if (PTR_ERR(tas6424->standby_gpio) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		dev_info(dev, "failed to get standby GPIO: %ld\n",
+			PTR_ERR(tas6424->standby_gpio));
+		tas6424->standby_gpio = NULL;
+	}
+
+	/*
+	 * Get control of the mute pin and set it HIGH in order to start with
+	 * all the output muted.
+	 * Note: The actual pin polarity is taken care of in the GPIO lib
+	 * according the polarity specified in the DTS.
+	 */
+	tas6424->mute_gpio = devm_gpiod_get_optional(dev, "mute",
+						      GPIOD_OUT_HIGH);
+	if (IS_ERR(tas6424->mute_gpio)) {
+		if (PTR_ERR(tas6424->mute_gpio) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		dev_info(dev, "failed to get nmute GPIO: %ld\n",
+			PTR_ERR(tas6424->mute_gpio));
+		tas6424->mute_gpio = NULL;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(tas6424->supplies); i++)
 		tas6424->supplies[i].supply = tas6424_supply_names[i];
 	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(tas6424->supplies),
@@ -670,9 +750,13 @@ static int tas6424_i2c_remove(struct i2c_client *client)
 	struct tas6424_data *tas6424 = dev_get_drvdata(dev);
 	int ret;
 
-	snd_soc_unregister_codec(dev);
+	/* WAS snd_soc_unregister_codec(dev); */
 
 	cancel_delayed_work_sync(&tas6424->fault_check_work);
+
+	/* put the codec in stand-by */
+	if (tas6424->standby_gpio)
+		gpiod_set_value_cansleep(tas6424->standby_gpio, 1);
 
 	ret = regulator_bulk_disable(ARRAY_SIZE(tas6424->supplies),
 				     tas6424->supplies);

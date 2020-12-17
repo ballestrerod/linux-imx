@@ -232,3 +232,6 @@ obj-$(CONFIG_MFD_STM32_LPTIMER)	+= stm32-lptimer.o
 obj-$(CONFIG_MFD_STM32_TIMERS) 	+= stm32-timers.o
 obj-$(CONFIG_MFD_MXS_LRADC)     += mxs-lradc.o
 obj-$(CONFIG_MFD_BD71837)       += bd71837.o
+
+enobu-fpga-objs			:= enobu-fpga-core.o enobu-fpga-ledmatrix.o enobu-fpga-gpioreg.o enobu-fpga-leds.o
+obj-$(CONFIG_MFD_ENOBU_FPGA)    += enobu-fpga.o

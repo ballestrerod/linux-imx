@@ -452,6 +452,8 @@ static int fsl_sai_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret;
 
+	dev_dbg(cpu_dai->dev, "%s() fmt=0x%0x\n", __func__, fmt);
+
 	if (sai->masterflag[FSL_FMT_TRANSMITTER])
 		fmt = (fmt & (~SND_SOC_DAIFMT_MASTER_MASK)) |
 				sai->masterflag[FSL_FMT_TRANSMITTER];

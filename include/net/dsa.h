@@ -278,7 +278,7 @@ static inline u8 dsa_upstream_port(struct dsa_switch *ds)
 	 */
 	if (dst->cpu_dp->ds == ds)
 		return dst->cpu_dp->index;
-	else
+        else
 		return ds->rtable[dst->cpu_dp->ds->index];
 }
 

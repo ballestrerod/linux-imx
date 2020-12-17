@@ -17,22 +17,25 @@
 
 struct usb5744 {
 	struct gpio_desc *reset_gpio;
+	struct gpio_desc *vbus_gpio;
 };
 
 static int usb5744_probe(
 	struct i2c_client *client, const struct i2c_device_id *id)
 {
-	int ret;
 	struct device *dev = &client->dev;
 	struct usb5744 *data =
 		devm_kzalloc(dev, sizeof(struct usb5744), GFP_KERNEL);
 	
         i2c_set_clientdata(client, data);
 	
-        data->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
+        data->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(data->reset_gpio)) {
-		dev_err(dev, "Failed to bind reset gpio");
-		return -ENODEV;
+
+                if (PTR_ERR(data->reset_gpio) == -EPROBE_DEFER)
+		        return PTR_ERR(data->reset_gpio);
+                
+                dev_err(dev, "Failed to bind reset gpio: %ld", PTR_ERR(data->reset_gpio));
 	}
 
 	/* Toggle RESET_N to reset the hub. */
@@ -41,12 +44,31 @@ static int usb5744_probe(
 	gpiod_set_value(data->reset_gpio, 0);
 	msleep(5);
 
-	/* Send SMBus command to boot hub. */
-	ret = i2c_smbus_write_word_data(client, 0xAA, htons(0x5600));
-	if (ret < 0) {
-		dev_err(dev, "Sending boot command failed");
-		return ret;
+
+        data->vbus_gpio = devm_gpiod_get_optional(dev, "vbus", GPIOD_OUT_HIGH);
+	if (IS_ERR(data->vbus_gpio)) {
+
+                if (PTR_ERR(data->vbus_gpio) == -EPROBE_DEFER)
+		        return PTR_ERR(data->vbus_gpio);
+                
+                dev_err(dev, "Failed to bind vbus gpio: %ld", PTR_ERR(data->vbus_gpio));
 	}
+
+	/* Toggle VBUS to reset the hub. */
+	gpiod_set_value(data->vbus_gpio, 1);
+	usleep_range(5, 20);
+	gpiod_set_value(data->vbus_gpio, 0);
+	msleep(5);
+
+
+//	/* Send SMBus command to boot hub. */
+//	int ret;
+//
+//	ret = i2c_smbus_write_word_data(client, 0xAA, htons(0x5600));
+//	if (ret < 0) {
+//		dev_err(dev, "Sending boot command failed");
+//		return ret;
+//	}
 
 	return 0;
 }
@@ -58,9 +80,18 @@ static const struct i2c_device_id usb5744_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, usb5744_id);
 
+#ifdef CONFIG_OF
+static const struct of_device_id usb5744_of_match[] = {
+	{ .compatible = "microchip,usb5744" },
+	{}
+};
+MODULE_DEVICE_TABLE(of, pi7c9x2g404_of_match);
+#endif
+
 static struct i2c_driver usb5744_driver = {
 	.driver = {
 		.name = "usb5744",
+		.of_match_table = of_match_ptr(usb5744_of_match),
 	},
 	.probe = usb5744_probe,
 	.id_table = usb5744_id,

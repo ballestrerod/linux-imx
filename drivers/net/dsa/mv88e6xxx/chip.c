@@ -14,6 +14,8 @@
  * (at your option) any later version.
  */
 
+//TODO #define DEBUG
+
 #include <linux/delay.h>
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
@@ -201,8 +203,8 @@ int mv88e6xxx_read(struct mv88e6xxx_chip *chip, int addr, int reg, u16 *val)
 	if (err)
 		return err;
 
-	dev_dbg(chip->dev, "<- addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
-		addr, reg, *val);
+//	dev_dbg(chip->dev, "<- addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
+//		addr, reg, *val);
 
 	return 0;
 }
@@ -217,8 +219,8 @@ int mv88e6xxx_write(struct mv88e6xxx_chip *chip, int addr, int reg, u16 val)
 	if (err)
 		return err;
 
-	dev_dbg(chip->dev, "-> addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
-		addr, reg, val);
+//	dev_dbg(chip->dev, "-> addr: 0x%.2x reg: 0x%.2x val: 0x%.4x\n",
+//		addr, reg, val);
 
 	return 0;
 }
@@ -1984,10 +1986,23 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int err;
 	int i;
+#ifdef DEBUG_NO_CPU_ATTACHED
+        u16 val;
+#endif /* DEBUG_NO_CPU_ATTACHED */
 
 	chip->ds = ds;
 	ds->slave_mii_bus = mv88e6xxx_default_mdio_bus(chip);
 
+#ifdef DEBUG_NO_CPU_ATTACHED
+	mutex_lock(&chip->reg_lock);
+   	err = mv88e6xxx_port_read(chip, 5, MV88E6XXX_PORT_CTL0, &val);
+	if (err)
+                dev_dbg(chip->dev, "error reading port5 PORT_CTL0");
+
+        dev_dbg(chip->dev, "port5 control val %x", val);
+	mutex_unlock(&chip->reg_lock);
+        return 0;
+#endif /* DEBUG_NO_CPU_ATTACHED */
 	mutex_lock(&chip->reg_lock);
 
 	/* Setup Switch Port Registers */
@@ -3676,6 +3691,9 @@ static struct mv88e6xxx_chip *mv88e6xxx_alloc_chip(struct device *dev)
 static int mv88e6xxx_smi_init(struct mv88e6xxx_chip *chip,
 			      struct mii_bus *bus, int sw_addr)
 {
+        dev_err(chip->dev, "SW_ADDR 0x%x: selecting %s-chip addressing mode\n",
+	        sw_addr, sw_addr == 0? "single":"multi");
+
 	if (sw_addr == 0)
 		chip->smi_ops = &mv88e6xxx_smi_single_chip_ops;
 	else if (chip->info->multi_chip)
@@ -3885,11 +3903,13 @@ static int mv88e6xxx_probe(struct mdio_device *mdiodev)
 	    !of_property_read_u32(np, "eeprom-length", &eeprom_len))
 		chip->eeprom_len = eeprom_len;
 
+#ifndef DEBUG_NO_CPU_ATTACHED
 	mutex_lock(&chip->reg_lock);
 	err = mv88e6xxx_switch_reset(chip);
 	mutex_unlock(&chip->reg_lock);
 	if (err)
 		goto out;
+#endif /* DEBUG_NO_CPU_ATTACHED */
 
 	chip->irq = of_irq_get(np, 0);
 	if (chip->irq == -EPROBE_DEFER) {

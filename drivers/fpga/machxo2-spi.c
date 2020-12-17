@@ -8,17 +8,126 @@
  * Copyright (C) 2018 Paolo Pisati <p.pisati@gmail.com>
  */
 
+#define DEBUG 1
+
 #include <linux/delay.h>
 #include <linux/fpga/fpga-mgr.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/spi/spi.h>
+#include <linux/fpga/machxo-efb.h>
+
+static struct spi_device *efb_spi;
+
+#if 0        
+static inline u8 enobu_hps2fpga_read(const struct enobu_hps2fpga_data *d,
+					u32 reg)
+{
+	struct spi_device *spifpga = d->spifpga;
+	struct spi_message msg;
+	struct spi_transfer rx, tx;
+	static u16 cmd;
+        unsigned long status;
+	int ret;
+
+        cmd = FPGA_READ | AD_CNT(1) | AD_ADDR(reg);
+	
+        memset(&rx, 0, sizeof(rx));
+	memset(&tx, 0, sizeof(tx));
+	tx.tx_buf = &cmd;
+	tx.len = sizeof(cmd);
+	rx.rx_buf = &status;
+	rx.len = 4;
+	spi_message_init(&msg);
+	spi_message_add_tail(&tx, &msg);
+	spi_message_add_tail(&rx, &msg);
+
+	ret = spi_sync(spifpga, &msg);
+	if (ret)
+		return ret;
+}
+#endif
+
+
+
+int __efb_spi_read(struct spi_device *spi, u16 reg, u8 *val)
+{
+	u8 buf[2], rbuf;
+	u16 cmd;
+	int ret;
+
+        spi->mode = SPI_MODE_0;
+
+        cmd = FPGA_READ | AD_CNT(1) | AD_ADDR(reg);
+	
+	buf[0] = cmd >> 8;
+	buf[1] = cmd & 0xFFF;
+
+	ret = spi_write_then_read(spi, &buf[0], 2, (void *)val, 1);
+	if (ret < 0) {
+                dev_err(&spi->dev, "Read Error %d", ret);
+                return ret;
+        }
+
+        return ret;
+}
+
+
+int efb_spi_read(u16 reg, u8 *val)
+{
+        if (efb_spi == NULL)
+		return -EPROBE_DEFER;
+
+        return __efb_spi_read(efb_spi, reg, val);
+}
+EXPORT_SYMBOL_GPL(efb_spi_read);
+
+
+
+
+
+int __efb_spi_write(struct spi_device *spi, u16 reg, u8 val)
+{
+	u8 buf[3];
+	u16 cmd;
+	int ret;
+
+	spi->mode = SPI_MODE_0;
+
+	cmd = FPGA_WRITE | AD_CNT(1) | AD_ADDR(reg);
+
+        buf[0] = cmd >> 8;
+	buf[1] = cmd & 0xFF;
+	buf[2] = val;
+
+	ret = spi_write(spi, &buf, sizeof(buf));
+	if (ret < 0) {
+		dev_err(&spi->dev, "failed to set fpga register.\n");
+	}
+
+        return ret;
+}
+
+int efb_spi_write(u16 reg, u8 val)
+{
+        if (efb_spi == NULL)
+		return -EPROBE_DEFER;
+
+        return __efb_spi_write(efb_spi, reg, val);
+}
+EXPORT_SYMBOL_GPL(efb_spi_write);
+
+
+
+
+
+
 
 /* MachXO2 Programming Guide - sysCONFIG Programming Commands */
 #define IDCODE_PUB		{0xe0, 0x00, 0x00, 0x00}
 #define ISC_ENABLE		{0xc6, 0x08, 0x00, 0x00}
-#define ISC_ERASE		{0x0e, 0x04, 0x00, 0x00}
+#define ISC_ERASE		{0x0e, 0x0c, 0x00, 0x00}
 #define ISC_PROGRAMDONE		{0x5e, 0x00, 0x00, 0x00}
 #define LSC_INITADDRESS		{0x46, 0x00, 0x00, 0x00}
 #define LSC_PROGINCRNV		{0x70, 0x00, 0x00, 0x01}
@@ -88,7 +197,6 @@ static int get_status(struct spi_device *spi, unsigned long *status)
 	return 0;
 }
 
-#ifdef DEBUG
 static const char *get_err_string(u8 err)
 {
 	switch (err) {
@@ -104,16 +212,13 @@ static const char *get_err_string(u8 err)
 
 	return "Default switch case";
 }
-#endif
 
 static void dump_status_reg(unsigned long *status)
 {
-#ifdef DEBUG
-	pr_debug("machxo2 status: 0x%08lX - done=%d, cfgena=%d, busy=%d, fail=%d, devver=%d, err=%s\n",
+	pr_err("machxo2 status: 0x%08lX - done=%d, cfgena=%d, busy=%d, fail=%d, devver=%d, err=%s\n",
 		 *status, test_bit(DONE, status), test_bit(ENAB, status),
 		 test_bit(BUSY, status), test_bit(FAIL, status),
 		 test_bit(DVER, status), get_err_string(get_err(status)));
-#endif
 }
 
 static int wait_until_not_busy(struct spi_device *spi)
@@ -141,6 +246,8 @@ static int machxo2_cleanup(struct fpga_manager *mgr)
 	static const u8 refresh[] = LSC_REFRESH;
 	int ret;
 
+	dev_dbg(&mgr->dev, "Cleanup ERASE START\n");
+
 	memset(tx, 0, sizeof(tx));
 	spi_message_init(&msg);
 	tx[0].tx_buf = &erase;
@@ -154,6 +261,8 @@ static int machxo2_cleanup(struct fpga_manager *mgr)
 	if (ret)
 		goto fail;
 
+	dev_dbg(&mgr->dev, "Cleanup ERASE END\n");
+
 	spi_message_init(&msg);
 	tx[1].tx_buf = &refresh;
 	tx[1].len = sizeof(refresh);
@@ -162,6 +271,8 @@ static int machxo2_cleanup(struct fpga_manager *mgr)
 	ret = spi_sync(spi, &msg);
 	if (ret)
 		goto fail;
+
+	dev_dbg(&mgr->dev, "Cleanup REFRESH END\n");
 
 	return 0;
 fail:
@@ -202,6 +313,8 @@ static int machxo2_write_init(struct fpga_manager *mgr,
 		return -ENOTSUPP;
 	}
 
+        dev_info(&mgr->dev, "Transmit Enable Configuration Interface (0xC6)\n");
+
 	get_status(spi, &status);
 	dump_status_reg(&status);
 	memset(tx, 0, sizeof(tx));
@@ -210,6 +323,8 @@ static int machxo2_write_init(struct fpga_manager *mgr,
 	tx[0].len = sizeof(enable);
 	tx[0].delay_usecs = MACHXO2_LOW_DELAY_USEC;
 	spi_message_add_tail(&tx[0], &msg);
+
+        dev_info(&mgr->dev, "Erase NVCM/Flash (0x0E)\n");
 
 	tx[1].tx_buf = &erase;
 	tx[1].len = sizeof(erase);
@@ -221,11 +336,13 @@ static int machxo2_write_init(struct fpga_manager *mgr,
 	ret = wait_until_not_busy(spi);
 	if (ret)
 		goto fail;
-
+	
 	get_status(spi, &status);
 	if (test_bit(FAIL, &status))
 		goto fail;
 	dump_status_reg(&status);
+
+        dev_info(&mgr->dev, "Transmit Reset NVCM0/CFG Address (0x46)\n");
 
 	spi_message_init(&msg);
 	tx[2].tx_buf = &initaddr;
@@ -262,8 +379,16 @@ static int machxo2_write(struct fpga_manager *mgr, const char *buf,
 	}
 	get_status(spi, &status);
 	dump_status_reg(&status);
+
+        dev_info(&mgr->dev, "ProgincrNV (0x70)\n");
+
+        printk(KERN_DEBUG "start: ");
+
 	memcpy(payload, &progincr, sizeof(progincr));
 	for (i = 0; i < count; i += MACHXO2_PAGE_SIZE) {
+
+                printk(KERN_CONT ".");
+
 		memcpy(&payload[sizeof(progincr)], &buf[i], MACHXO2_PAGE_SIZE);
 		memset(&tx, 0, sizeof(tx));
 		spi_message_init(&msg);
@@ -280,6 +405,8 @@ static int machxo2_write(struct fpga_manager *mgr, const char *buf,
 	get_status(spi, &status);
 	dump_status_reg(&status);
 
+        printk(KERN_CONT "\n");
+
 	return 0;
 }
 
@@ -294,26 +421,36 @@ static int machxo2_write_complete(struct fpga_manager *mgr,
 	unsigned long status;
 	int ret, refreshloop = 0;
 
+        dev_info(&mgr->dev, "Transmit Program DONE Command (0x5e)\n");
+
 	memset(tx, 0, sizeof(tx));
 	spi_message_init(&msg);
 	tx[0].tx_buf = &progdone;
 	tx[0].len = sizeof(progdone);
 	spi_message_add_tail(&tx[0], &msg);
 	ret = spi_sync(spi, &msg);
-	if (ret)
+	if (ret) {
+	        dev_err(&mgr->dev, "send PROGDONE\n");
 		goto fail;
-	ret = wait_until_not_busy(spi);
-	if (ret)
+        }
+	
+        ret = wait_until_not_busy(spi);
+	if (ret) {
+	        dev_err(&mgr->dev, "wait BUSY\n");
 		goto fail;
-
+        }
 	get_status(spi, &status);
 	dump_status_reg(&status);
 	if (!test_bit(DONE, &status)) {
+	        dev_err(&mgr->dev, "signal DONE\n");
 		machxo2_cleanup(mgr);
 		goto fail;
 	}
 
 	do {
+
+                dev_info(&mgr->dev, "Transmit Refresh Command (0x79)\n");
+
 		spi_message_init(&msg);
 		tx[1].tx_buf = &refresh;
 		tx[1].len = sizeof(refresh);
@@ -330,6 +467,7 @@ static int machxo2_write_complete(struct fpga_manager *mgr,
 		    get_err(&status) == ENOERR)
 			break;
 		if (++refreshloop == MACHXO2_MAX_REFRESH_LOOP) {
+	                dev_err(&mgr->dev, "max refresh loop\n");
 			machxo2_cleanup(mgr);
 			goto fail;
 		}
@@ -356,30 +494,29 @@ static int machxo2_spi_probe(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 	struct fpga_manager *mgr;
-	int ret;
 
 	if (spi->max_speed_hz > MACHXO2_MAX_SPEED) {
 		dev_err(dev, "Speed is too high\n");
 		return -EINVAL;
 	}
 
-	mgr = fpga_mgr_create(dev, "Lattice MachXO2 SPI FPGA Manager",
-			      &machxo2_ops, spi);
+	mgr = devm_fpga_mgr_create(dev, "Lattice MachXO2 SPI FPGA Manager",
+				   &machxo2_ops, spi);
 	if (!mgr)
 		return -ENOMEM;
 
 	spi_set_drvdata(spi, mgr);
 
-	ret = fpga_mgr_register(mgr);
-	if (ret)
-		fpga_mgr_free(mgr);
+        efb_spi = spi;
 
-	return ret;
+	return fpga_mgr_register(mgr);
 }
 
 static int machxo2_spi_remove(struct spi_device *spi)
 {
 	struct fpga_manager *mgr = spi_get_drvdata(spi);
+        
+        efb_spi = NULL;
 
 	fpga_mgr_unregister(mgr);
 
