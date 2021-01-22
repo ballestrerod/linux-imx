@@ -406,8 +406,8 @@ static int enobu_gpioreg_probe(struct platform_device *pdev)
 	enobu_gpioreg_init(dev, ENOBU_FPGA_RSTDEV, -1, 2, "reset_dev", 0,
                            def_val, reset_dev_names, NULL, NULL);
 
-        dev_info(dev, "eNOBU GPIO registers initialized\n");
-        return ret;
+	dev_info(dev, "eNOBU GPIO registers initialized\n");
+	return ret;
 }
 
 

@@ -120,6 +120,7 @@ static int enobu_led_probe(struct platform_device *pdev)
         struct enobu_fpga *enobufpga = dev_get_drvdata(pdev->dev.parent);
         struct enobu_leds *leds;
         struct enobu_led  *led;
+
 	int i;
 	int ret;
 
