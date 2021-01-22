@@ -2330,7 +2330,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	imx_pcie->clkreq_gpio = of_get_named_gpio(node, "clkreq-gpio", 0);
 	if (gpio_is_valid(imx_pcie->clkreq_gpio)) {
 		ret = devm_gpio_request_one(&pdev->dev, imx_pcie->clkreq_gpio,
-					    GPIOF_OUT_INIT_LOW, "PCIe CLKREQ");
+					    GPIOF_OUT_INIT_HIGH, "PCIe CLKREQ");
 		if (ret) {
 			dev_err(&pdev->dev, "unable to get clkreq gpio\n");
 			return ret;
@@ -2794,6 +2794,8 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		switch (imx_pcie->variant) {
 		case IMX8MQ:
 		case IMX8MM:
+			//dev_info(dev, "Check L1SS\n");
+
 			val = readl(pci->dbi_base +
 					IMX8MQ_PCIE_L1SUB_CTRL1_REG_OFFSET);
 			if (val & IMX8MQ_PCIE_L1SUB_CTRL1_REG_EN_MASK) {
@@ -2805,6 +2807,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 				regmap_update_bits(imx_pcie->iomuxc_gpr, val,
 					IMX8MQ_GPR_PCIE_CLK_REQ_OVERRIDE_EN,
 					0);
+				dev_info(dev, "L1SS enabled\n");
 			}
 			break;
 		default:

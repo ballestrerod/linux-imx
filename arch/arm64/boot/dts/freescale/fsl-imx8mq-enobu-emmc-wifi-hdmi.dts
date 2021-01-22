@@ -73,7 +73,7 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio1 12 GPIO_ACTIVE_HIGH>;
-		        enable-active-high;
+			enable-active-high;
 			regulator-always-on;
                 };
 	};
@@ -482,12 +482,21 @@
 		pinctrl_usbotg: usbotggrp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12		0xc1   /* usb_otg_pwr_en */
+				/*MX8MQ_IOMUXC_GPIO1_IO10_USB1_OTG_ID		0x17059*/
+				MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0xc1
 			>;
 		};
 
 		pinctrl_pcie0: pcie0grp {
 			fsl,pins = <
-				MX8MQ_IOMUXC_SAI1_TXD7_GPIO4_IO19		0x16
+				MX8MQ_IOMUXC_SAI1_RXD5_GPIO4_IO7		0x16	/* PCI reset */
+				MX8MQ_IOMUXC_SAI1_RXC_GPIO4_IO1			0x16	/* Clock request */
+			>;
+		};
+
+		pinctrl_pcie1: pcie1grp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x16	/* Clock request */
 			>;
 		};
 	};
@@ -505,7 +514,6 @@
 };
 
 
-
 /* Marvell switch NO_CPU_ATTACHED mode
 &fec1 {
 	pinctrl-names = "default";
@@ -519,7 +527,6 @@
                 speed = <1000>;
                 full-duplex;
         };
-
 };
 */
 
@@ -970,42 +977,41 @@
 	pinctrl-0 = <&pinctrl_i2c4>;
 	status = "okay";
 
-        pcie_sw: pi7c9x2g404@6f {
+	pcie_sw: pi7c9x2g404@6f {
 		compatible = "pericom,pi7c9x2g404";
 		reg = <0x6f>;
-                reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
-        };
+		reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
+	};
 
-        enobu_fpga: enobu-fpga@32 {
-   	        pinctrl-names = "default";
-   	        pinctrl-0 = <&pinctrl_fpga>;
-                compatible = "leonardo,enobu-fpga";
-   	        reg = <0x32>;
+	enobu_fpga: enobu-fpga@32 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_fpga>;
+		compatible = "leonardo,enobu-fpga";
+		reg = <0x32>;
 
-   	        interrupt-parent = <&gpio1>;
-   	        interrupts = <11 IRQ_TYPE_EDGE_FALLING>; 
-   	     
-                ledmatrix: ledmatrix@0 {
-                        compatible = "leonardo,enobu-fpga-ledmatrix";
-                };
-                
-                leds: leds@0 {
-                        compatible = "leonardo,enobu-fpga-leds";
-                };
-                
-                gpioreg: gpioreg@0 {
-                        compatible = "leonardo,enobu-fpga-gpioreg";
-                        gpio-controller;
-                        #gpio-cells = <3>;
-                };
-        };
+		interrupt-parent = <&gpio1>;
+		interrupts = <11 IRQ_TYPE_EDGE_FALLING>;
 
-        /* TODO popolare con
+		ledmatrix: ledmatrix@0 {
+			compatible = "leonardo,enobu-fpga-ledmatrix";
+		};
 
-           - PI7C9X2G404  pcie hub
-           - LCMXO3       fpga (backup) 
-           
-        */
+		leds: leds@0 {
+			compatible = "leonardo,enobu-fpga-leds";
+		};
+
+		gpioreg: gpioreg@0 {
+			compatible = "leonardo,enobu-fpga-gpioreg";
+			gpio-controller;
+			#gpio-cells = <3>;
+		};
+	};
+
+	/* TODO popolare con
+
+	- PI7C9X2G404  pcie hub
+	- LCMXO3       fpga (backup)
+	*/
 };
 
 &ecspi2 {
@@ -1033,13 +1039,17 @@
 &pcie0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
-	reset-gpio = <&gpio4 19 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio4 7 GPIO_ACTIVE_LOW>;
+	clkreq-gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>;
 	ext_osc = <1>;
 	status = "okay";
 };
 
 /* PCIe Switch x2 ports */
 &pcie1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie1>;
+	clkreq-gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
 	ext_osc = <1>;
 	status = "okay";
 };
@@ -1122,10 +1132,12 @@
 	pinctrl-0 = <&pinctrl_usbotg>;
 	vbus-supply = <&reg_usb_otg1_vbus>;
 	disable-over-current;
-        srp-disable;
-        hnp-disable;
-        adp-disable;
-        dr_mode = "host";
+	srp-disable;
+	hnp-disable;
+	adp-disable;
+	/*otg-rev = <0x0200>;
+	dr_mode = "otg";*/
+	dr_mode = "host";
 	status = "okay";
 };
 
@@ -1143,7 +1155,6 @@
 	dr_mode = "host";
 	status = "okay";
 };
-
 
 
 &gpio4 {
