@@ -619,8 +619,8 @@
 		compatible = "ti,tas6424";
 		reg = <0x6a>;
 
-		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
-		clock-names = "mclk";
+		//clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
+		//clock-names = "mclk";
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_audiopw>;
@@ -998,13 +998,14 @@
 
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
-			MX8MQ_IOMUXC_SAI1_RXD5_GPIO4_IO7		0x16
+			MX8MQ_IOMUXC_SAI1_RXD5_GPIO4_IO7		0x16    /* Reset         */
+                        MX8MQ_IOMUXC_SAI1_RXC_GPIO4_IO1			0x16	/* Clock request */
 		>;
 	};
 
 	pinctrl_pcie1: pcie1grp {
 		fsl,pins = <
-			MX8MQ_IOMUXC_SAI1_TXD7_GPIO4_IO19		0x16
+                        MX8MQ_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x16	/* Clock request */
 		>;
 	};
 
@@ -1042,6 +1043,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
 	reset-gpio = <&gpio4 7 GPIO_ACTIVE_LOW>;
+        clkreq-gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>;
 	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
 		 <&clk IMX8MQ_CLK_PCIE1_AUX>,
 		 <&clk IMX8MQ_CLK_PCIE1_PHY>,
@@ -1054,7 +1056,7 @@
 &pcie1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie1>;
-	reset-gpio = <&gpio4 19 GPIO_ACTIVE_LOW>;
+        clkreq-gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
 		 <&clk IMX8MQ_CLK_PCIE2_AUX>,
 		 <&clk IMX8MQ_CLK_PCIE2_PHY>,
@@ -1156,10 +1158,26 @@
 	status = "okay";
 };
 
+&dcss {
+	status = "okay";
+
+	port@0 {
+		dcss_out: endpoint {
+			  remote-endpoint = <&hdmi_in>;
+		};
+	};
+};
+
 &hdmi {
 	compatible = "cdn,imx8mq-hdmi";
 	lane-mapping = <0xe4>;
 	status = "okay";
+
+	port@1 {
+		hdmi_in: endpoint {
+			remote-endpoint = <&dcss_out>;
+		};
+	};
 };
 
 /* TAS6424 power codec */

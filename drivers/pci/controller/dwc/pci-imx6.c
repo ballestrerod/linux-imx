@@ -2470,7 +2470,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	imx6_pcie->clkreq_gpio = of_get_named_gpio(node, "clkreq-gpio", 0);
 	if (gpio_is_valid(imx6_pcie->clkreq_gpio)) {
 		devm_gpio_request_one(&pdev->dev, imx6_pcie->clkreq_gpio,
-				      GPIOF_OUT_INIT_LOW, "PCIe CLKREQ");
+				      GPIOF_OUT_INIT_HIGH, "PCIe CLKREQ");
 	} else if (imx6_pcie->clkreq_gpio == -EPROBE_DEFER) {
 		return imx6_pcie->clkreq_gpio;
 	}

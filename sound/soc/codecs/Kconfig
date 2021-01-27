@@ -699,6 +699,9 @@ config SND_SOC_ES8328_SPI
 	depends on SPI_MASTER
 	select SND_SOC_ES8328
 
+config SND_SOC_ENOBU_FPGA_AUXAUDIO
+	tristate 'eNOBU FPGA AUX audio codec'
+
 config SND_SOC_FSL_MQS
 	tristate
 
