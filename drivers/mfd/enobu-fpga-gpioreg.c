@@ -57,29 +57,29 @@ static int enobu_gpioreg_direction_input(struct gpio_chip *gc, unsigned offset)
 static void enobu_gpioreg_set(struct gpio_chip *gc, unsigned offset, int value)
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
-	unsigned long flags;
 	u8 val, mask = BIT(offset);
-        int ret;
+	int ret;
 
 	// spin_lock_irqsave(&r->lock, flags);
 	
-        val = r->out;
+	val = r->out;
 	if (value)
 		val |= mask;
 	else
 		val &= ~mask;
 	
-        //CHG writel_relaxed(val, r->reg);
-        //efb_spi_write(r->fpga_reg, val);
-        ret = enobu_fpga_reg_write(r->enobufpga, r->fpga_reg, val);
- 	if (ret < 0)
+	//CHG writel_relaxed(val, r->reg);
+	//efb_spi_write(r->fpga_reg, val);
+	ret = enobu_fpga_reg_write(r->enobufpga, r->fpga_reg, val);
+
+	if (ret < 0)
 		goto out;
 
-        r->out = val;
+	r->out = val;
 
 out:
-        //spin_unlock_irqrestore(&r->lock, flags);
-        return;
+	//spin_unlock_irqrestore(&r->lock, flags);
+	return;
 }
 
 
@@ -96,25 +96,26 @@ static int enobu_gpioreg_get(struct gpio_chip *gc, unsigned offset)
 		// read readl_relaxed(r->reg);
 		// val = readl_relaxed(r->reg);
 
-                //efb_spi_read(r->fpga_reg, &val);
-                enobu_fpga_reg_read(r->enobufpga, r->fpga_reg, (unsigned int *)&val);
+		//efb_spi_read(r->fpga_reg, &val);
+		enobu_fpga_reg_read(r->enobufpga, r->fpga_reg, (unsigned int *)&val);
 
 	} else {
 		val = r->out;
 	}
+
 	return !!(val & mask);
 }
 
 
 static int enobu_gpioreg_request(struct gpio_chip *gc, unsigned offset)
 {
-        return 0;
+	return 0;
 }
 
 
 static void enobu_gpioreg_free(struct gpio_chip *gc, unsigned offset)
 {
-        return;
+	return;
 }
 
 
@@ -122,22 +123,21 @@ static void enobu_gpioreg_set_multiple(struct gpio_chip *gc, unsigned long *mask
 	unsigned long *bits)
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
-	unsigned long flags;
-        int ret;
+	int ret;
 
 	// spin_lock_irqsave(&r->lock, flags);
 
 	r->out = (r->out & ~*mask) | (*bits & *mask);
 
 	//CHG writel_relaxed(r->out, r->reg);
-        //efb_spi_write(r->fpga_reg, r->out);
-        ret = enobu_fpga_reg_write(r->enobufpga, r->fpga_reg, r->out);
+	//efb_spi_write(r->fpga_reg, r->out);
+	ret = enobu_fpga_reg_write(r->enobufpga, r->fpga_reg, r->out);
  	if (ret < 0)
 		return;
 	
 //out:
-        // spin_unlock_irqrestore(&r->lock, flags);
-//        return;
+//	spin_unlock_irqrestore(&r->lock, flags);
+//	return;
 }
 
 
@@ -158,8 +158,8 @@ static int fpga_gpioreg_of_xlate(struct gpio_chip *gc,
 {
 	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
 
-        pr_debug ("fpga_gpiochip REG %x: %s  base %d args[%d]: %d %d\n", 
-                        r->fpga_reg, gc->label, gc->base, gpiospec->args_count, gpiospec->args[0], gpiospec->args[1]);
+	pr_debug("fpga_gpiochip REG %x: %s  base %d args[%d]: %d %d\n", 
+			r->fpga_reg, gc->label, gc->base, gpiospec->args_count, gpiospec->args[0], gpiospec->args[1]);
 
 	if (r->fpga_reg != gpiospec->args[0])
 		return -EINVAL;
@@ -210,31 +210,31 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
 
 	//spin_lock_init(&r->lock);
 
-	r->gc.label = label;
-	r->gc.get_direction = enobu_gpioreg_get_direction;
-	r->gc.direction_input = enobu_gpioreg_direction_input;
-	r->gc.direction_output = enobu_gpioreg_direction_output;
-	r->gc.set = enobu_gpioreg_set;
-	r->gc.get = enobu_gpioreg_get;
-	r->gc.request = enobu_gpioreg_request;
-	r->gc.free = enobu_gpioreg_free;
-	r->gc.set_multiple = enobu_gpioreg_set_multiple;
+	r->gc.label				= label;
+	r->gc.get_direction		= enobu_gpioreg_get_direction;
+	r->gc.direction_input	= enobu_gpioreg_direction_input;
+	r->gc.direction_output	= enobu_gpioreg_direction_output;
+	r->gc.set				= enobu_gpioreg_set;
+	r->gc.get				= enobu_gpioreg_get;
+	r->gc.request			= enobu_gpioreg_request;
+	r->gc.free				= enobu_gpioreg_free;
+	r->gc.set_multiple		= enobu_gpioreg_set_multiple;
 	if (irqs)
 		r->gc.to_irq = enobu_gpioreg_to_irq;
-	r->gc.base = base;
-	r->gc.parent = dev;
-	r->gc.ngpio = num;
-	r->gc.names = names;
+	r->gc.base		= base;
+	r->gc.parent	= dev;
+	r->gc.ngpio		= num;
+	r->gc.names		= names;
 
-	r->gc.of_gpio_n_cells = 3;
-        r->gc.of_node = dev->of_node;
-        r->gc.of_xlate = fpga_gpioreg_of_xlate;
+	r->gc.of_gpio_n_cells	= 3;
+	r->gc.of_node			= dev->of_node;
+	r->gc.of_xlate			= fpga_gpioreg_of_xlate;
 
-        r->enobufpga = enobufpga;
-	r->direction = direction;
-	r->out = def_out;
-	r->fpga_reg = fpga_reg;
-	r->irqs = irqs;
+	r->enobufpga	= enobufpga;
+	r->direction	= direction;
+	r->out			= def_out;
+	r->fpga_reg		= fpga_reg;
+	r->irqs			= irqs;
 
 	if (dev)
 		ret = devm_gpiochip_add_data(dev, &r->gc, r);
@@ -247,8 +247,7 @@ struct gpio_chip *enobu_gpioreg_init(struct device *dev, u16 fpga_reg,
 
 int gpio_reg_resume(struct gpio_chip *gc)
 {
-	struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
-	unsigned long flags;
+	//struct enobu_gpioreg *r = to_enobu_gpioreg(gc);
 
 	//spin_lock_irqsave(&r->lock, flags);
 	// writel_relaxed(r->out, r->reg);
@@ -258,8 +257,8 @@ int gpio_reg_resume(struct gpio_chip *gc)
 }
 
 
-
-static const char *m2_slot1_names[] = {
+/* miniPCI */
+static const char *slot1_names[] = {
 	"sl1_reset", "sl1_w_disable1", "sl1_fullcard_poweroff",
 };
 
@@ -268,15 +267,17 @@ static const char *m2_slot1_names[] = {
 #define ENOBU_FPGA_M2_SL1_DIS           (1<<1)
 #define ENOBU_FPGA_M2_SL1_POFF          (1<<2)
 
-static const char *m2_slot2_names[] = {
+
+/* M2 slot */
+static const char *slot2_names[] = {
 	"sl2_reset", "sl2_w_disable1", "sl2_fullcard_poweroff",
 };
-
 
 #define ENOBU_FPGA_M2_SL2               0x01
 #define ENOBU_FPGA_M2_SL2_RST           (1<<0)
 #define ENOBU_FPGA_M2_SL2_DIS           (1<<1)
 #define ENOBU_FPGA_M2_SL2_POFF          (1<<2)
+
 
 static const char *usb_hub_names[] = {
 	"hub_ctl1", "hub_ctl2", "hub_ctl3", "hub_ctl4",
@@ -295,6 +296,7 @@ static const char *usb_hub_names[] = {
 	(ENOBU_FPGA_USB_HUB_CTL1  | ENOBU_FPGA_USB_HUB_CTL2 | \
 	 ENOBU_FPGA_USB_HUB_CTL3 | ENOBU_FPGA_USB_HUB_CTL4 )
 
+
 static const char *uart_comm_names[] = {
 	NULL, "fast_mode", "loopback",
 };
@@ -302,6 +304,7 @@ static const char *uart_comm_names[] = {
 #define ENOBU_FPGA_UART_COMM            0x03
 #define ENOBU_FPGA_UART_COMM_FASTM      (1<<1)
 #define ENOBU_FPGA_UART_COMM_LOOPB      (1<<2)
+
 
 static const char *uart2_conf_names[] = {
 	"uart2_term", "uart2_mode", "uart2_txena", "uart2_rxena",
@@ -315,6 +318,7 @@ static const char *uart2_conf_names[] = {
 #define ENOBU_FPGA_UART2_CONF_RXEN      (1<<3)
 #define ENOBU_FPGA_UART2_CONF_DUPL      (1<<7)
 
+
 static const char *uart3_conf_names[] = {
 	"uart3_term", "uart3_mode", "uart3_txena", "uart3_rxena",
         NULL, NULL, NULL, "uart3_duplex",
@@ -327,23 +331,42 @@ static const char *uart3_conf_names[] = {
 #define ENOBU_FPGA_UART3_CONF_RXEN      (1<<3)
 #define ENOBU_FPGA_UART3_CONF_DUPL      (1<<7)
 
-static const char *digital_out_names[] = {
-	"out0", "out1", "out2",
-};
-
-#define ENOBU_FPGA_HANDSFREE            0x06
-#define ENOBU_FPGA_HANDSFREE_ONOFF      (1<<1)
-#define ENOBU_FPGA_HANDSFREE_HOOK       (1<<7)
 
 static const char *handsfree_names[] = {
 	NULL, "on_off", NULL, NULL, 
-        NULL, NULL, NULL, "hook"
+		NULL, NULL, NULL, "hook"
+};
+
+#define ENOBU_FPGA_HANDSFREE		0x06
+#define ENOBU_FPGA_HANDSFREE_ONOFF	(1<<1)
+#define ENOBU_FPGA_HANDSFREE_HOOK	(1<<7)
+
+
+static const char *box_ssd_names[] = {
+	"id0", "id1", "id2", NULL, NULL,
+		"enable_ssd", "reset_ssd", "key_box_ssd"
+};
+
+#define ENOBU_FPGA_BOX_SSD			0x07
+#define ENOBU_FPGA_BOX_SSD_ID0		(1<<0)
+#define ENOBU_FPGA_BOX_SSD_ID1		(1<<1)
+#define ENOBU_FPGA_BOX_SSD_ID2		(1<<2)
+#define ENOBU_FPGA_BOX_SSD_ENABLE	(1<<5)
+#define ENOBU_FPGA_BOX_SSD_RESET	(1<<6)
+#define ENOBU_FPGA_BOX_SSD_KEY		(1<<7)
+
+#define ENOBU_FPGA_BOX_SSD_DEFAULT	\
+		( ENOBU_FPGA_BOX_SSD_ENABLE | ENOBU_FPGA_BOX_SSD_RESET )
+
+static const char *digital_out_names[] = {
+	"out0", "out1", "out2",
 };
 
 #define ENOBU_FPGA_DOUT       0x09
 #define ENOBU_FPGA_DOUT1      (1<<0)
 #define ENOBU_FPGA_DOUT2      (1<<1)
 #define ENOBU_FPGA_DOUT3      (1<<2)
+
 
 static const char *digital_inp_names[] = {
 	"inp0", "inp1", "inp2", "inp3",
@@ -359,6 +382,7 @@ static const char *digital_inp_names[] = {
 #define ENOBU_FPGA_DINP6      (1<<5)
 #define ENOBU_FPGA_DINP7      (1<<6)
 
+
 static const char *reset_dev_names[] = {
 	"reset_pcie", "reset_hd",
 };
@@ -368,19 +392,28 @@ static const char *reset_dev_names[] = {
 #define ENOBU_FPGA_RSTDEV_HD    (1<<1)
 
 
+static const char *key_names[] = {
+	"key_pres", "key_hold",
+};
+
+#define ENOBU_FPGA_KEY			0x17
+#define ENOBU_FPGA_KEY_PRES		(1<<0)
+#define ENOBU_FPGA_KEY_HOLD		(1<<1)
+
+#define ENOBU_FPGA_KEY_DEFAULT	ENOBU_FPGA_KEY_HOLD
+
 
 static int enobu_gpioreg_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	// struct gpio_chip *gc;
 	int ret = 0;
 	u8 def_val = 0;
 
-	enobu_gpioreg_init(dev, ENOBU_FPGA_M2_SL1, -1, 3, "m2_slot1", 0,
-                           def_val, m2_slot1_names, NULL, NULL);
+	enobu_gpioreg_init(dev, ENOBU_FPGA_M2_SL1, -1, 3, "minipci_slot", 0,
+                           def_val, slot1_names, NULL, NULL);
 
-	enobu_gpioreg_init(dev, ENOBU_FPGA_M2_SL2, -1, 3, "m2_slot2", 0,
-                           def_val, m2_slot2_names, NULL, NULL);
+	enobu_gpioreg_init(dev, ENOBU_FPGA_M2_SL2, -1, 3, "m2_slot", 0,
+                           def_val, slot2_names, NULL, NULL);
 
 	enobu_gpioreg_init(dev, ENOBU_FPGA_USB_HUB, -1, 8, "usb_hub", 0,
                            ENOBU_FPGA_USB_HUB_DEFAULT, usb_hub_names, NULL, NULL);
@@ -397,6 +430,9 @@ static int enobu_gpioreg_probe(struct platform_device *pdev)
 	enobu_gpioreg_init(dev, ENOBU_FPGA_HANDSFREE, -1, 8, "handsfree", 0x80,
                            def_val, handsfree_names, NULL, NULL);
 
+	enobu_gpioreg_init(dev, ENOBU_FPGA_BOX_SSD, -1, 8, "box_ssd", 0x87,
+                           ENOBU_FPGA_BOX_SSD_DEFAULT, box_ssd_names, NULL, NULL);
+
 	enobu_gpioreg_init(dev, ENOBU_FPGA_DOUT, -1, 3, "digital_out", 0,
                            def_val, digital_out_names, NULL, NULL);
 
@@ -406,8 +442,11 @@ static int enobu_gpioreg_probe(struct platform_device *pdev)
 	enobu_gpioreg_init(dev, ENOBU_FPGA_RSTDEV, -1, 2, "reset_dev", 0,
                            def_val, reset_dev_names, NULL, NULL);
 
-        dev_info(dev, "eNOBU GPIO registers initialized\n");
-        return ret;
+	enobu_gpioreg_init(dev, ENOBU_FPGA_KEY, -1, 2, "key", 1,
+                           ENOBU_FPGA_KEY_DEFAULT, key_names, NULL, NULL);
+
+	dev_info(dev, "eNOBU GPIO registers initialized\n");
+	return ret;
 }
 
 
@@ -416,25 +455,25 @@ static int enobu_gpioreg_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int ret = 0;
         
-        dev_info(dev, "eNOBU GPIO registers removed\n");
-        return ret;
+	dev_info(dev, "eNOBU GPIO registers removed\n");
+	return ret;
 }
 
 
 static const struct of_device_id enobu_gpioreg_of_match[] = {
-        { .compatible = "leonardo,enobu-fpga-gpioreg" },
-        { }
+	{ .compatible = "leonardo,enobu-fpga-gpioreg" },
+	{ }
 };
 MODULE_DEVICE_TABLE(of, enobu_gpioreg_of_match);
 
 
 static struct platform_driver enobu_gpioreg_driver = {
-        .probe = enobu_gpioreg_probe,
-        .remove = enobu_gpioreg_remove,
-        .driver = {
-                .name = "enobu-fpga-gpioreg",
-                .of_match_table = enobu_gpioreg_of_match,
-        },
+	.probe  = enobu_gpioreg_probe,
+	.remove = enobu_gpioreg_remove,
+	.driver = {
+		.name = "enobu-fpga-gpioreg",
+		.of_match_table = enobu_gpioreg_of_match,
+	},
 };
 
 module_platform_driver(enobu_gpioreg_driver);

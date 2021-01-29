@@ -32,10 +32,10 @@ struct enobu_led {
 };
 
 struct enobu_leds {
-        struct device           *dev;
-        struct enobu_fpga       *enobufpga;
-        struct mutex            lock;
-        struct enobu_led        *led[ENOBU_FPGA_MAX_LEDS];
+	struct device           *dev;
+	struct enobu_fpga       *enobufpga;
+	struct mutex            lock;
+	struct enobu_led        *led[ENOBU_FPGA_MAX_LEDS];
 };
 
 
@@ -67,13 +67,13 @@ static int enobu_led_brightness_set(struct led_classdev *led_cdev,
 {
 	//struct enobu_led *led = container_of(led_cdev, struct enobu_led, cdev);
 	struct enobu_led *led = to_enobu_led(led_cdev);
-        struct enobu_leds *leds = led->parent;
+	struct enobu_leds *leds = led->parent;
 	unsigned int val;
-        int ret;
+	int ret;
 
-        mutex_lock(&leds->lock);
+	mutex_lock(&leds->lock);
 
-        ret = enobu_fpga_reg_read(leds->enobufpga, led->reg, &val);
+	ret = enobu_fpga_reg_read(leds->enobufpga, led->reg, &val);
  	if (ret < 0)
 		goto out;
 
@@ -82,16 +82,16 @@ static int enobu_led_brightness_set(struct led_classdev *led_cdev,
 	else
 		val |= led->mask;
 
-        ret = enobu_fpga_reg_write(leds->enobufpga, led->reg, val);
+	ret = enobu_fpga_reg_write(leds->enobufpga, led->reg, val);
  	if (ret < 0)
 		goto out;
 
-        led->current_brightness = val;
+	led->current_brightness = val;
 
 out:        
-        mutex_unlock(&leds->lock);
+	mutex_unlock(&leds->lock);
 
-        return ret;
+	return ret;
 }
 
 
@@ -100,14 +100,14 @@ static enum led_brightness enobu_led_brightness_get(struct led_classdev *led_cde
 {
 	//struct enobu_led *led = container_of(led_cdev, struct enobu_led, cdev);
 	struct enobu_led *led = to_enobu_led(led_cdev);
-        struct enobu_leds *leds = led->parent;
+	struct enobu_leds *leds = led->parent;
 	unsigned int val;
 
-        mutex_lock(&leds->lock);
+	mutex_lock(&leds->lock);
 
-        enobu_fpga_reg_read(leds->enobufpga, led->reg, &val);
-        
-        mutex_unlock(&leds->lock);
+	enobu_fpga_reg_read(leds->enobufpga, led->reg, &val);
+
+	mutex_unlock(&leds->lock);
 
 	return val & led->mask ? LED_FULL : LED_OFF;
 }
@@ -117,9 +117,10 @@ static enum led_brightness enobu_led_brightness_get(struct led_classdev *led_cde
 static int enobu_led_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-        struct enobu_fpga *enobufpga = dev_get_drvdata(pdev->dev.parent);
-        struct enobu_leds *leds;
-        struct enobu_led  *led;
+	struct enobu_fpga *enobufpga = dev_get_drvdata(pdev->dev.parent);
+	struct enobu_leds *leds;
+	struct enobu_led  *led;
+
 	int i;
 	int ret;
 
@@ -128,9 +129,9 @@ static int enobu_led_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	platform_set_drvdata(pdev, leds);
-        leds->dev = dev;
+	leds->dev = dev;
 
-       	/*
+	/*
 	 * leds->enobufpga points to the underlying bus for the register
 	 * controlled.
 	 */
@@ -138,17 +139,18 @@ static int enobu_led_probe(struct platform_device *pdev)
 	mutex_init(&leds->lock);
 
 	for (i = 0; i < ENOBU_FPGA_MAX_LEDS; i++) {
-                led = devm_kzalloc(dev, sizeof(*led), GFP_KERNEL);
+		led = devm_kzalloc(dev, sizeof(*led), GFP_KERNEL);
+
 		if (!led) {
 			ret = -ENOMEM;
 			goto out_err;
 		}
 
-                leds->led[i] = led;
-                leds->led[i]->id = i;
-                leds->led[i]->reg = led_reg[i].reg;
-                leds->led[i]->mask = led_reg[i].mask;
-                leds->led[i]->current_brightness = 0;
+		leds->led[i] = led;
+		leds->led[i]->id = i;
+		leds->led[i]->reg = led_reg[i].reg;
+		leds->led[i]->mask = led_reg[i].mask;
+		leds->led[i]->current_brightness = 0;
 		leds->led[i]->cdev.name = led_reg[i].name;
 		leds->led[i]->cdev.brightness_set_blocking = 
                                         enobu_led_brightness_set;
@@ -174,8 +176,8 @@ out_err:
 
 
 static const struct of_device_id enobu_led_of_match[] = {
-        { .compatible = "leonardo,enobu-fpga-leds" },
-        { }
+	{ .compatible = "leonardo,enobu-fpga-leds" },
+	{ }
 };
 MODULE_DEVICE_TABLE(of, enobu_led_of_match);
 

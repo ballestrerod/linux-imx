@@ -24,6 +24,9 @@
 #define ENOBU_FPGA_REG_USBHUB		0x002
 
 /* UART REGS */
+#define ENOBU_FPGA_REG_UARTMODE		0x003
+#define ENOBU_FPGA_REG_TTY1_CNF		0x004
+#define ENOBU_FPGA_REG_TTY2_CNF		0x005
 
 #define ENOBU_FPGA_REG_POELED		0x00b
 #define ENOBU_FPGA_REG_SPARELED		0x00c
@@ -58,8 +61,6 @@
 
 #define MATRIXDISP_MODE_FIXED	                0x00
 #define MATRIXDISP_MODE_SCROLL	                0x01
-
-
 
 
 
