@@ -524,6 +524,7 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 	struct i2c_client *codec_dev;
 	const char *codec_dai_name;
 	u32 width;
+	int amplifier_dapm_routes = 0;
 	int ret;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
@@ -552,9 +553,6 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 		codec_dev = of_find_i2c_device_by_node(codec_np);
 	else
 		codec_dev = NULL;
-
-        
-        dev_err(&pdev->dev, "codec_np %s   codec_dev %s\n", codec_np->name, codec_dev->name);
 
 	asrc_np = of_parse_phandle(np, "audio-asrc", 0);
 	if (asrc_np)
@@ -623,6 +621,7 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 		}
 	} else if (of_device_is_compatible(np, "fsl,imx-audio-tas6424")) {
 		codec_dai_name = "tas6424-amplifier";
+		amplifier_dapm_routes = 1;
 		priv->card.set_bias_level = NULL;
                 priv->codec_priv.mclk_id = TAS6424_SYSCLK_MCLK;
 		priv->codec_priv.fll_id = TAS6424_SYSCLK_MCLK;
@@ -679,6 +678,9 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 	/* Drop the second half of DAPM routes -- ASRC */
 	if (!asrc_pdev)
 		priv->card.num_dapm_routes /= 2;
+
+	if (amplifier_dapm_routes)
+		priv->card.num_dapm_routes -= 1;
 
 	memcpy(priv->dai_link, fsl_asoc_card_dai,
 	       sizeof(struct snd_soc_dai_link) * ARRAY_SIZE(priv->dai_link));

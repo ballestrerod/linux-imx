@@ -38,6 +38,8 @@ static int usb5744_probe(
                 dev_err(dev, "Failed to bind reset gpio: %ld", PTR_ERR(data->reset_gpio));
 	}
 
+	dev_info(dev, "toggle RESET");
+
 	/* Toggle RESET_N to reset the hub. */
 	gpiod_set_value(data->reset_gpio, 1);
 	usleep_range(5, 20);
@@ -53,6 +55,8 @@ static int usb5744_probe(
                 
                 dev_err(dev, "Failed to bind vbus gpio: %ld", PTR_ERR(data->vbus_gpio));
 	}
+
+	dev_info(dev, "toggle VBUS");
 
 	/* Toggle VBUS to reset the hub. */
 	gpiod_set_value(data->vbus_gpio, 1);
@@ -85,7 +89,7 @@ static const struct of_device_id usb5744_of_match[] = {
 	{ .compatible = "microchip,usb5744" },
 	{}
 };
-MODULE_DEVICE_TABLE(of, pi7c9x2g404_of_match);
+MODULE_DEVICE_TABLE(of, usb5744_of_match);
 #endif
 
 static struct i2c_driver usb5744_driver = {
