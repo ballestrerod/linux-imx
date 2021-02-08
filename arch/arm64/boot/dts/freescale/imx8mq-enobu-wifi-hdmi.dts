@@ -76,15 +76,15 @@
 		regulator-always-on;
 	};
 
-/*	reg_usb_otg1_vbus: vbus_otg {
+	reg_usb_otg1_vbus: vbus_otg {
 		compatible = "regulator-fixed";
 		regulator-name = "usb_otg1_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio1 12 GPIO_ACTIVE_HIGH>;
-	        enable-active-high;
+		/*gpio = <&gpio1 12 GPIO_ACTIVE_HIGH>;*/
+		enable-active-high;
 		regulator-always-on;
-	}; */
+	};
 
 	/* CFPX-180 quartz crystal */
 	can0_osc: can0_osc {
@@ -504,23 +504,31 @@
 	pinctrl_bt: btgrp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0xc1	/* BT_REG_ON     */
-			MX8MQ_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0xc1	/* BT_BUF_EN     */
+			MX8MQ_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5	0xc1	/* BT_BUF_EN     */
+		>;
+	};
+
+	pinctrl_usbotg: usbotggrp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12		0xc1   /* usb_otg_pwr_en */
+			MX8MQ_IOMUXC_GPIO1_IO12_USB1_OTG_PWR	0xc1   /* usb_otg_pwr_en */
+			/*MX8MQ_IOMUXC_GPIO1_IO10_USB1_OTG_ID		0x17059 */
+			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0xc1    /* USB OTG id */
 		>;
 	};
 
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_SAI1_RXD5_GPIO4_IO7		0x16    /* Reset         */
-                        MX8MQ_IOMUXC_SAI1_RXC_GPIO4_IO1			0x16	/* Clock request */
+			MX8MQ_IOMUXC_SAI1_RXC_GPIO4_IO1			0x16	/* Clock request */
 		>;
 	};
 
 	pinctrl_pcie1: pcie1grp {
 		fsl,pins = <
-                        MX8MQ_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x16	/* Clock request */
+			MX8MQ_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x16	/* Clock request */
 		>;
 	};
-
 };
 
 
@@ -554,12 +562,12 @@
 //        phy-handle = <&switch0uplink>;
 	phy-reset-gpios = <&gpio3 24 GPIO_ACTIVE_LOW>;
 	phy-reset-duration = <30>;
-        status = "okay";
+	status = "okay";
 
-        fixed-link {
-                speed = <1000>;
-                full-duplex;
-        };
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
 
 	mdio {
 		#address-cells = <1>;
@@ -901,19 +909,19 @@
 		};
 	};
 
-        /* RTC8564 real time clock */
+	/* RTC8564 real time clock */
 	pcf8564@51 {
 		compatible = "nxp,pcf8563";
 		reg = <0x51>;
 	};
 
-        /* M24512 eeprom */
+	/* M24512 eeprom */
 	eeprom@57 {
 		compatible = "atmel,24c512";
 		reg = <0x57>;
 	};
 
-        /* TAS6424 power codec */
+	/* TAS6424 power codec */
 	audiopwr_codec: tas6424@6a {
 		compatible = "ti,tas6424";
 		reg = <0x6a>;
@@ -945,8 +953,8 @@
 					 <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
 	};
 
-        /* USB5744T  usb hub */
-        usb3_hub: usb5744@2d {
+	/* USB5744T  usb hub */
+	usb3_hub: usb5744@2d {
 		compatible = "microchip,usb5744";
 		reg = <0x2d>;
 
@@ -980,38 +988,37 @@
 	pinctrl-0 = <&pinctrl_i2c4>;
 	status = "okay";
         
-        /* PI7C9X2G404 pcie hub */
-        pcie_sw: pi7c9x2g404@6f {
+	/* PI7C9X2G404 pcie hub */
+	pcie_sw: pi7c9x2g404@6f {
 		compatible = "pericom,pi7c9x2g404";
 		reg = <0x6f>;
-                reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
-        };
+		reset-gpio = <&gpioreg 0x16 0 GPIO_ACTIVE_LOW>;
+	};
 
-        /* LCMXO3 fpga */ 
-        enobu_fpga: enobu-fpga@32 {
-   	        pinctrl-names = "default";
-   	        pinctrl-0 = <&pinctrl_fpga>;
-                compatible = "leonardo,enobu-fpga";
-   	        reg = <0x32>;
+	/* LCMXO3 fpga */
+	enobu_fpga: enobu-fpga@32 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_fpga>;
+		compatible = "leonardo,enobu-fpga";
+		reg = <0x32>;
 
-   	        interrupt-parent = <&gpio1>;
-   	        interrupts = <11 IRQ_TYPE_EDGE_FALLING>; 
+		interrupt-parent = <&gpio1>;
+		interrupts = <11 IRQ_TYPE_EDGE_FALLING>;
    	     
-                ledmatrix: ledmatrix@0 {
-                        compatible = "leonardo,enobu-fpga-ledmatrix";
-                };
-                
-                leds: leds@0 {
-                        compatible = "leonardo,enobu-fpga-leds";
-                };
-                
-                gpioreg: gpioreg@0 {
-                        compatible = "leonardo,enobu-fpga-gpioreg";
-                        gpio-controller;
-                        #gpio-cells = <3>;
-                };
-        };
+		ledmatrix: ledmatrix@0 {
+			compatible = "leonardo,enobu-fpga-ledmatrix";
+		};
 
+		leds: leds@0 {
+			compatible = "leonardo,enobu-fpga-leds";
+		};
+
+		gpioreg: gpioreg@0 {
+			compatible = "leonardo,enobu-fpga-gpioreg";
+			gpio-controller;
+			#gpio-cells = <3>;
+		};
+	};
 };
 
 &ecspi2 {
@@ -1046,11 +1053,11 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
 	reset-gpio = <&gpio4 7 GPIO_ACTIVE_LOW>;
-        clkreq-gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>;
+	clkreq-gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>;
 	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
-		 <&clk IMX8MQ_CLK_PCIE1_AUX>,
-		 <&clk IMX8MQ_CLK_PCIE1_PHY>,
-		 <&pcie0_refclk>;
+		<&clk IMX8MQ_CLK_PCIE1_AUX>,
+		<&clk IMX8MQ_CLK_PCIE1_PHY>,
+		<&pcie0_refclk>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
 	hard-wired = <1>;
 	status = "okay";
@@ -1059,11 +1066,11 @@
 &pcie1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie1>;
-        clkreq-gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+	clkreq-gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
-		 <&clk IMX8MQ_CLK_PCIE2_AUX>,
-		 <&clk IMX8MQ_CLK_PCIE2_PHY>,
-		 <&pcie1_refclk>;
+		<&clk IMX8MQ_CLK_PCIE2_AUX>,
+		<&clk IMX8MQ_CLK_PCIE2_PHY>,
+		<&pcie1_refclk>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
 	status = "okay";
 };
@@ -1138,18 +1145,32 @@
 	};
 };
 
+/ {
+usb3_id: usb3-id {
+	compatible = "linux,extcon-usb-gpio";
+	id-gpio = <&gpio1 10 GPIO_ACTIVE_LOW>;
+	/*vbus-gpio = <&gpio1 12 GPIO_ACTIVE_HIGH>;*/
+	/*  pinctrl-names = "default";
+	pinctrl-0 = <&usb3_vbus_det_gpio>;*/
+	};
+};
+
 
 &usb_dwc3_0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg>;
 	dr_mode = "otg";
-	hnp-disable;
-	srp-disable;
+	/*hnp-disable;
+	srp-disable;*/
 	adp-disable;
+	extcon = <&usb3_id>;
 	snps,dis-u1-entry-quirk;
 	snps,dis-u2-entry-quirk;
 	status = "okay";
 };
 
 &usb3_phy0 {
+	vbus-supply = <&reg_usb_otg1_vbus>;
 	status = "okay";
 };
 
@@ -1169,7 +1190,7 @@
 
 	port@0 {
 		dcss_out: endpoint {
-			  remote-endpoint = <&hdmi_in>;
+		remote-endpoint = <&hdmi_in>;
 		};
 	};
 };
@@ -1181,7 +1202,7 @@
 
 	port@1 {
 		hdmi_in: endpoint {
-			remote-endpoint = <&dcss_out>;
+		remote-endpoint = <&dcss_out>;
 		};
 	};
 };
@@ -1200,7 +1221,7 @@
 &sai2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai2>;
-        #sound-dai-cells = <0>;
+	#sound-dai-cells = <0>;
 	assigned-clocks = <&clk IMX8MQ_CLK_SAI2>;
 	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <1536000>;
