@@ -56,11 +56,8 @@
 /* Register field definitions */
 
 
-#define MATRIXDISP_MODE_FIXED	                0x00
-#define MATRIXDISP_MODE_SCROLL	                0x01
-
-
-
+#define MATRIXDISP_MODE_FIXED		0x00
+#define MATRIXDISP_MODE_SCROLL		0x01
 
 
 struct enobu_fpga {

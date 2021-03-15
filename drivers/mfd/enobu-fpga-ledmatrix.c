@@ -839,8 +839,6 @@ const unsigned int matrix_bitmap_descriptor[] =
  *  +      [4]       +       #    # ###  # #  
  *  +----------------+        ##  # ###   # 
  *
- *
- *
  */
 
 
@@ -860,23 +858,23 @@ static void matrixdisp_write_row(u8 val, int rown)
 #endif
 
 
-static void matrixdisp_write_mode(struct enobu_fpga *enobufpga, u8 mode)
+static void matrixdisp_write_mode(struct enobu_fpga *enobufpga, u8 mode, u8 columns)
 {
-        int ret;
+	int value = (columns << 1) | mode;
 
-	ret = enobu_fpga_reg_write(enobufpga, ENOBU_FPGA_REG_MTRXDISPMODE, mode);
-	if (ret < 0) {
-		dev_err(enobufpga->dev, "%s: Error in writing reg 0x%x\n",
+	if (enobu_fpga_reg_write(enobufpga, ENOBU_FPGA_REG_MTRXDISPMODE, value) < 0)
+	{
+		dev_err(enobufpga->dev, "%s: Error in writing reg 0x%02X\n",
 			__func__, ENOBU_FPGA_REG_MTRXDISPMODE);
 	}
 
-        return;
+	return;
 }
 
 
 static void matrixdisp_write_row(struct enobu_fpga *enobufpga, u8 val, int rown)
 {
-        int ret;
+	int ret;
 
 	ret = enobu_fpga_reg_write(enobufpga, ENOBU_FPGA_REG_MTRXDISP + rown, val);
 	if (ret < 0) {
@@ -884,12 +882,8 @@ static void matrixdisp_write_row(struct enobu_fpga *enobufpga, u8 val, int rown)
 			__func__, ENOBU_FPGA_REG_MTRXDISP);
 	}
 
-        return;
+	return;
 }
-
-
-
-
 
 
 
@@ -919,40 +913,41 @@ static int matrixdisp_chr_display(struct enobu_fpga *enobufpga, const char *disp
     int curr_width = 0;
     u_int8_t dot_row[MATRIX_ROW_HEIGHT];
     u_int8_t dot_row_tmp;
-    
+
     /* Prendo la stringa e punto al primo carattere */
     chr_str = (char *)dispchr;
 
     memset(dot_row, 0, sizeof(u_int8_t) * MATRIX_ROW_HEIGHT);
-    
+
     for (j = 0; j < strlen(dispchr); j++, chr_str++) {
-    
+
+		/* Skip unprintable ascii */
         if (*chr_str < 0x20 || *chr_str > 0x7e)
             continue;
-    
+
         chr_offset = (*chr_str) - 0x20;
-    
+
         chr_pxl_bitmap = (char *) &matrix_bitmap[chr_offset * 5]; 
         chr_pxl_width = matrix_bitmap_descriptor[chr_offset];
  
         if ((curr_width + chr_pxl_width + 1) > 7)
             break;
-    
+
         /* scrivo il carattere nella sua casella REDUCED (7-bit) */
         for (i = 0, dot_row_tmp = 0; i < MATRIX_ROW_HEIGHT; i++, chr_pxl_bitmap++) {
-    
+
             dot_row_tmp = ((u_int8_t) *chr_pxl_bitmap) >> 1;
             dot_row[i] |= dot_row_tmp >> curr_width;
         }
-    
+
         /* avanzo nei pixel */
         curr_width += chr_pxl_width + 1;
     }
-    
+
     /* scrivo byte a byte la stringa nella FPGA */
     matrixdisp_chr_fill(enobufpga, dot_row);
 
-    return 0;
+	return curr_width;
 }
 
 
@@ -960,12 +955,14 @@ static int matrixdisp_chr_display(struct enobu_fpga *enobufpga, const char *disp
 
 int matrixdisp_char(struct enobu_fpga *enobufpga, const char *dchr)
 {
-    matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_FIXED);
-    matrixdisp_chr_display(enobufpga, dchr);
+	int columns;
 
-    pr_debug("[MATRIX-CHAR] %s\n", dchr);
+	columns = matrixdisp_chr_display(enobufpga, dchr);
+	matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_FIXED, columns);
 
-    return 0;
+	pr_debug("[MATRIX-CHAR] %s\n", dchr);
+
+	return 0;
 }
 
 
@@ -996,7 +993,7 @@ void matrixdisp_str_fill(struct enobu_fpga *enobufpga, u_int32_t *dotrow)
 
 
 
-int matrixdisp_str_display(struct enobu_fpga *enobufpga, const char *dispstr)
+static int matrixdisp_str_display(struct enobu_fpga *enobufpga, const char *dispstr)
 {
     char *chr_pxl_bitmap, *chr_str;
     int i, j, chr_offset;
@@ -1037,14 +1034,16 @@ int matrixdisp_str_display(struct enobu_fpga *enobufpga, const char *dispstr)
     /* scrivo byte a byte la stringa nella FPGA */
     matrixdisp_str_fill(enobufpga, dot_row);
     
-    return 0;
+    return curr_width;
 }
 
 
 int matrixdisp_prnt(struct enobu_fpga *enobufpga, const char *dstr)
 {
-    matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_SCROLL);
-    matrixdisp_str_display(enobufpga, dstr);
+	int columns;
+
+    columns = matrixdisp_str_display(enobufpga, dstr);
+    matrixdisp_write_mode(enobufpga, MATRIXDISP_MODE_SCROLL, columns);
 
     pr_debug("[MATRIX-PRINT] %s\n", dstr);
 
@@ -1092,12 +1091,12 @@ static ssize_t store_ledmatrix_mode(struct device *dev,
 	struct enobu_ledmatrix *ldmtrx = dev_get_drvdata(dev);
 
 	if (sysfs_streq(buf, "fixed")) {
-                matrixdisp_write_mode(ldmtrx->enobufpga, MATRIXDISP_MODE_FIXED);
-                ldmtrx->mode = MATRIXDISP_MODE_FIXED;
-        } else if (sysfs_streq(buf, "scroll")) {
-                matrixdisp_write_mode(ldmtrx->enobufpga, MATRIXDISP_MODE_SCROLL);
-                ldmtrx->mode = MATRIXDISP_MODE_SCROLL;
-        } else {
+		matrixdisp_write_mode(ldmtrx->enobufpga, MATRIXDISP_MODE_FIXED, 7);
+		ldmtrx->mode = MATRIXDISP_MODE_FIXED;
+	} else if (sysfs_streq(buf, "scroll")) {
+		matrixdisp_write_mode(ldmtrx->enobufpga, MATRIXDISP_MODE_SCROLL, 31);
+		ldmtrx->mode = MATRIXDISP_MODE_SCROLL;
+	} else {
 		return -EINVAL;
 	}
 
@@ -1105,9 +1104,6 @@ static ssize_t store_ledmatrix_mode(struct device *dev,
 }
 
 static DEVICE_ATTR(ledmatrix_mode, 0644, show_ledmatrix_mode, store_ledmatrix_mode);
-
-
-
 
 
 
@@ -1218,7 +1214,7 @@ static int enobu_ledmatrix_release(struct inode *inode, struct file *file)
 
 static const struct file_operations enobu_ledmatrix_fops = {
 	.owner          = THIS_MODULE,
-        .write          = enobu_ledmatrix_write,
+	.write          = enobu_ledmatrix_write,
 	.open           = enobu_ledmatrix_open,
 	.release        = enobu_ledmatrix_release,
 	.unlocked_ioctl = enobu_ledmatrix_ioctl,
@@ -1227,11 +1223,10 @@ static const struct file_operations enobu_ledmatrix_fops = {
 
 
 
-
 static int enobu_ledmatrix_probe(struct platform_device *pdev)
 {
-        struct enobu_fpga *enobufpga = dev_get_drvdata(pdev->dev.parent);
-        struct enobu_ledmatrix *ldmtrx;
+	struct enobu_fpga *enobufpga = dev_get_drvdata(pdev->dev.parent);
+	struct enobu_ledmatrix *ldmtrx;
 	struct device *dev = &pdev->dev;
 	int ret = 0;
         
@@ -1250,14 +1245,14 @@ static int enobu_ledmatrix_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto out;
 
-        pr_debug("1. ledmatrix: MODE %x\n", ldmtrx->mode);
+	pr_debug("1. ledmatrix: MODE %x\n", ldmtrx->mode);
 
 	ldmtrx->miscdev.minor	= MISC_DYNAMIC_MINOR;
 	ldmtrx->miscdev.name	= DEVICE_NAME;
 	ldmtrx->miscdev.fops	= &enobu_ledmatrix_fops;
 	ldmtrx->miscdev.parent	= &pdev->dev;
 
-        //TODO eventually request device resources
+	//TODO eventually request device resources
 
 	/* register misc device */
 	ret = misc_register(&ldmtrx->miscdev);
@@ -1266,10 +1261,10 @@ static int enobu_ledmatrix_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-        pr_debug("0. ledmatrix: MODE %x\n", ldmtrx->mode);
+	pr_debug("0. ledmatrix: MODE %x\n", ldmtrx->mode);
 
-        dev_info(dev, "eNOBU LED matrix initialized\n");
-        return 0;
+	dev_info(dev, "eNOBU LED matrix initialized\n");
+	return 0;
 
 out:        
 	return ret;
